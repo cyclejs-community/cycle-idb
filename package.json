@@ -1,0 +1,39 @@
+{
+  "name": "cycle-idb",
+  "version": "0.0.1",
+  "description": "A cycle driver for IndexedDB.",
+  "main": "index.js",
+  "scripts": {
+    "test": "NODE_PATH=src tape -r babel-register 'src/**/*.test.js' | ./node_modules/.bin/tap-diff"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Avalander/cycle-idb.git"
+  },
+  "keywords": [
+    "cycle",
+    "idb",
+    "indexeddb"
+  ],
+  "author": "Avalander",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Avalander/cycle-idb/issues"
+  },
+  "homepage": "https://github.com/Avalander/cycle-idb#readme",
+  "dependencies": {
+    "@cycle/run": "^3.1.0",
+    "idb": "^2.0.3",
+    "xstream": "^10.8.0"
+  },
+  "devDependencies": {
+    "babel-core": "^6.25.0",
+    "babel-preset-env": "^1.6.0",
+    "babel-preset-stage-0": "^6.24.1",
+    "babel-register": "^6.24.1",
+    "fake-indexeddb": "^2.0.3",
+    "sinon": "^2.3.7",
+    "tap-diff": "^0.1.1",
+    "tape": "^4.7.0"
+  }
+}
