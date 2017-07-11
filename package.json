@@ -2,8 +2,10 @@
   "name": "cycle-idb",
   "version": "0.0.1",
   "description": "A cycle driver for IndexedDB.",
-  "main": "index.js",
+  "main": "lib/index.js",
   "scripts": {
+    "prelib": "rm -rf lib/*",
+    "lib": "babel src/idb-driver.js --out-file lib/index.js",
     "test": "NODE_PATH=src tape -r babel-register 'src/**/*.test.js' | ./node_modules/.bin/tap-diff"
   },
   "repository": {
@@ -27,6 +29,7 @@
     "xstream": "^10.8.0"
   },
   "devDependencies": {
+    "babel-cli": "^6.24.1",
     "babel-core": "^6.25.0",
     "babel-preset-env": "^1.6.0",
     "babel-preset-stage-0": "^6.24.1",
