@@ -12,6 +12,4 @@ npm i cycle-idb
 
 ## Usage
 
-```
-
-```
+Take a look at the [examples](examples). More info coming soon.
