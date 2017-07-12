@@ -80,7 +80,10 @@ function GetSelector(dbPromise, write$, name, key) {
 					const store = tx.objectStore(name)
 					const keyPath = store.keyPath
 
-					if (value !== name && value.data[keyPath] !== key) {
+					if (value !== name 
+						&& value.data[keyPath] !== key
+						&& value.data !== key
+					) {
 						return
 					}
 					const data = await store.get(key)

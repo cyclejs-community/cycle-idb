@@ -195,7 +195,7 @@ test('IdbDriver.get() selector should send undefined value when no key found', t
 test('IdbDriver.get() selector shound send db value when listener registers', t => {
 	t.plan(1)
 
-	const driver = makeIdbDriver(getTestId, 1, mockDatabase([
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase([
 		{ name: 'Pinkie Pie', type: 'Earth Pony' },
 		{ name: 'Rainbow Dash', type: 'Pegasus' },
 	]))(xs.never())
@@ -203,6 +203,24 @@ test('IdbDriver.get() selector shound send db value when listener registers', t 
 		.addListener({
 			next: value => t.deepEqual(value, { name: 'Pinkie Pie', type: 'Earth Pony' })
 		})
+})
+
+test('IdbDriver.get() selector should send undefined when value is deleted', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase([
+		{ name: 'Rarity', type: 'unicorn' }
+	]))(fromDiagram('-a--|', {
+		values: {
+			a: $delete('ponies', 'Rarity'),
+		},
+		timeUnit: 20,
+	}))
+	driver.store('ponies').get('Rarity')
+		.addListener(sequenceListener(t)([
+			value => t.deepEqual(value, { name: 'Rarity', type: 'unicorn' }),
+			value => t.equal(value, undefined),
+		]))
 })
 
 const sequenceListener = test => (listeners, bounded=true) => {
