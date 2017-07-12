@@ -1,7 +1,7 @@
 import xs from 'xstream'
 
 import { run } from '@cycle/run'
-import { makeDOMDriver, div, ul, li } from '@cycle/dom'
+import { makeDOMDriver, div, ul, li, span } from '@cycle/dom'
 
 import makeIdbDriver, { $put } from 'cycle-idb'
 
@@ -19,10 +19,17 @@ function main(sources) {
 		.map(x => PONIES[x])
 		.map(x => $put('ponies', x))
 	
-	const vtree$ = sources.IDB.store('ponies').getAll()
+	const ponyListVtree$ = sources.IDB.store('ponies').getAll()
 		.map(ponies => ul(
 			ponies.map(pony => li(`${pony.name} is a ${pony.type}.`))
 		))
+	const ponyCountVtree$ = sources.IDB.store('ponies').count()
+		.map(x => span(`There are ${x} ponies.`))
+	const vtree$ = xs.combine(ponyListVtree$, ponyCountVtree$)
+		.map(([ ponyList, ponyCount ]) => div([
+			ponyList,
+			ponyCount
+		]))
 	
 	return {
 		IDB: addPonies$,

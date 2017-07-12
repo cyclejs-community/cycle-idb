@@ -218,8 +218,65 @@ test('IdbDriver.get() selector should send undefined when value is deleted', t =
 	}))
 	driver.store('ponies').get('Rarity')
 		.addListener(sequenceListener(t)([
-			value => t.deepEqual(value, { name: 'Rarity', type: 'unicorn' }),
-			value => t.equal(value, undefined),
+			value => t.deepEqual(value, { name: 'Rarity', type: 'unicorn' }, 'Rarity is in database'),
+			value => t.equal(value, undefined, 'When Rarity is removed, undefined is sent'),
+		]))
+})
+
+test('IdbDriver.count() should start with 0 when store is empty', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase())(xs.never())
+	driver.store('ponies').count()
+		.addListener(sequenceListener(t)([
+			value => t.equal(value, 0),
+		]))
+})
+
+test('IdbDriver.count() should start with 1 when store has one element', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase([
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+	]))(xs.never())
+	driver.store('ponies').count()
+		.addListener(sequenceListener(t)([
+			value => t.equal(value, 1),
+		]))
+})
+
+test('IdbDriver.count() should send new count when an element is added', t=> {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase())(
+		fromDiagram('-a--|', {
+			values: {
+				a: $put('ponies', { name: 'Twilight Sparkle', type: 'unicorn' }),
+			},
+			timeUnit: 20,
+		}))
+	driver.store('ponies').count()
+		.addListener(sequenceListener(t)([
+			value => t.equal(value, 0),
+			value => t.equal(value, 1),
+		]))
+})
+
+test('IdbDriver.count() should send new count when an element is removed', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase([
+		{ name: 'Fluttershy', type: 'pegasus' },
+	]))(fromDiagram('-a--|', {
+		values: {
+			a: $delete('ponies', 'Fluttershy'),
+		},
+		timeUnit: 20,
+	}))
+	driver.store('ponies').count()
+		.addListener(sequenceListener(t)([
+			value => t.equal(value, 1),
+			value => t.equal(value, 0),
 		]))
 })
 

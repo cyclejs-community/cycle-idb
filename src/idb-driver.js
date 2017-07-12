@@ -41,14 +41,21 @@ export default function makeIdbDriver(name, version, upgrade) {
 		return {
 			store: name => ({
 				get: key => {
-					const hash = name + '#' + key
+					const hash = name + '#get#' + key
 					const selector = stores[hash] || GetSelector(dbPromise, write$, name, key)
 					stores[hash] = selector
 					return selector
 				},
 				getAll: () => {
-					const selector = stores[name] || GetAllSelector(dbPromise, write$, name)
-					stores[name] = selector
+					const hash = name + '#getAll'
+					const selector = stores[hash] || GetAllSelector(dbPromise, write$, name)
+					stores[hash] = selector
+					return selector
+				},
+				count: () => {
+					const hash = name + '#count'
+					const selector = stores[hash] || CountSelector(dbPromise, write$, name)
+					stores[hash] = selector
 					return selector
 				}
 			})
@@ -107,6 +114,25 @@ function GetAllSelector(dbPromise, write$, name) {
 					const store = tx.objectStore(name)
 					const data = await store.getAll()
 					listener.next(data)
+				},
+				error: e => listener.error(e)
+			}),
+		stop: () => {},
+	}))
+}
+
+function CountSelector(dbPromise, write$, name) {
+	return adapt(xs.createWithMemory({
+		start: listener => write$
+			.filter(({ store }) => store === name)
+			.startWith(name)
+			.addListener({
+				next: async value => {
+					const db = await dbPromise
+					const tx = db.transaction(name)
+					const store = tx.objectStore(name)
+					const count = await store.count()
+					listener.next(count)
 				},
 				error: e => listener.error(e)
 			}),
