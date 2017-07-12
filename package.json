@@ -6,7 +6,8 @@
   "scripts": {
     "prelib": "rm -rf lib/*",
     "lib": "babel src/idb-driver.js --out-file lib/index.js",
-    "test": "NODE_PATH=src tape -r babel-register 'src/**/*.test.js' | ./node_modules/.bin/tap-diff"
+    "test": "NODE_PATH=src tape -r babel-register 'src/**/*.test.js' | ./node_modules/.bin/tap-diff",
+    "prepare": "npm test && npm run lib"
   },
   "repository": {
     "type": "git",
