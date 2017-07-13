@@ -9,11 +9,11 @@ export default function makeIdbDriver(name, version, upgrade) {
 
 	const BasicOperation = (operation) => async (store, data) => {
 		const db = await dbPromise
-		const tx = db.transaction(store, 'readwrite')
-		const storeObj = tx.objectStore(store)
-		storeObj[operation](data)
+		await db.transaction(store, 'readwrite')
+			.objectStore(store)[operation](data)
 		return await tx.complete
 	}
+
 	const IDB_OPERATIONS = {
 		$put: BasicOperation('put'),
 		$delete: BasicOperation('delete'),
@@ -22,7 +22,7 @@ export default function makeIdbDriver(name, version, upgrade) {
 			const tx = db.transaction(store, 'readwrite')
 			const storeObj = tx.objectStore(store)
 			const oldValue = await storeObj.get(data[storeObj.keyPath])
-			storeObj.put({...oldValue, ...data})
+			await storeObj.put({...oldValue, ...data})
 			return await tx.complete
 		},
 	}
@@ -30,15 +30,23 @@ export default function makeIdbDriver(name, version, upgrade) {
 	return function idbDriver(write$) {
 		const stores = {}
 
+		const error$ = xs.never()
+
 		write$.addListener({
-			next: async ({ operation, store, data }) => {
-				return await IDB_OPERATIONS[operation](store, data)
+			next: ({ operation, store, data }) => {
+				return IDB_OPERATIONS[operation](store, data)
+					.catch(e => {
+						e.store = store
+						e.query = { operation, data }
+						error$.shamefullySendError(e)
+					})
 			},
 			error: () => {},
 			complete: () => {},
 		})
 
 		return {
+			error$,
 			store: name => ({
 				get: key => {
 					const hash = name + '#get#' + key
@@ -110,9 +118,9 @@ function GetAllSelector(dbPromise, write$, name) {
 			.addListener({
 				next: async value => {
 					const db = await dbPromise
-					const tx = db.transaction(name)
-					const store = tx.objectStore(name)
-					const data = await store.getAll()
+					const data = await db.transaction(name)
+						.objectStore(name)
+						.getAll()
 					listener.next(data)
 				},
 				error: e => listener.error(e)
@@ -129,9 +137,9 @@ function CountSelector(dbPromise, write$, name) {
 			.addListener({
 				next: async value => {
 					const db = await dbPromise
-					const tx = db.transaction(name)
-					const store = tx.objectStore(name)
-					const count = await store.count()
+					const count = await db.transaction(name)
+						.objectStore(name)
+						.count()
 					listener.next(count)
 				},
 				error: e => listener.error(e)

@@ -25,12 +25,12 @@ The function `makeIdbDriver` accepts three arguments.
 import makeIdbDriver from 'cycle-idb'
 
 const drivers = {
-	IDB: makeIdbDriver('pony-db', 1, upgradeDb => {
-		// Contains the current version of the database before upgrading
-		upgradeDb.oldVersion
-		// Creates a new store in the database
-		upgradeDb.createObjectStore('ponies', { keyPath: 'name' })
-	})
+    IDB: makeIdbDriver('pony-db', 1, upgradeDb => {
+        // Contains the current version of the database before upgrading
+        upgradeDb.oldVersion
+        // Creates a new store in the database
+        upgradeDb.createObjectStore('ponies', { keyPath: 'name' })
+    })
 }
 ```
 
@@ -40,12 +40,15 @@ Cycle-idb is designed around subscribing to the data and receiving updates when 
 
 ```javascript
 function main(sources) {
-	// This returns a stream that will emit an event every time the data in the 'ponies' store changes.
-	const allPonies$ = sources.IDB.store('ponies').getAll()
+    // This returns a stream that will emit an event every time the data in the 'ponies' store changes.
+    const allPonies$ = sources.IDB.store('ponies').getAll()
 
-	// This returns a stream that will emit an event every time the data in the 'ponies' store
-	// with the primary key 'Twilight Sparkle' changes.
-	const twilight$ = sources.IDB.store('ponies').get('Twilight Sparkle')
+    // This returns a stream that will emit an event every time the data in the 'ponies' store
+    // with the primary key 'Twilight Sparkle' changes.
+    const twilight$ = sources.IDB.store('ponies').get('Twilight Sparkle')
+
+    // This returs a stream that will emit an event every time the count of objects in the 'ponies' store changes.
+    const ponyCount$ = sources.IDB.store('ponies').count()
 }
 ```
 
@@ -62,19 +65,34 @@ import fromDiagram from 'xstream/extra/fromDiagram'
 import { $put, $update, $delete } from 'cycle-idb'
 
 function main(sources) {
-	const updateDb$ = fromDiagram('-a-b-c-|', {
-		values: {
-			// Will add the entry 'Twilight Sparkle' to the store 'ponies'
-			a: $put('ponies', { name: 'Twilight Sparkle', type: 'unicorn' }),
-			// Will update the entry 'Twilight Sparkle', keeping the previous 'type' field
-			b: $update('ponies', { name: 'Twilight Sparkle', element: 'magic' }),
-			// Will remove 'Twilight Sparkle' from the store 'ponies'
-			c: $delete('ponies', 'Twilight Sparkle'),
-		}
-	})
+    const updateDb$ = fromDiagram('-a-b-c-|', {
+        values: {
+            // Will add the entry 'Twilight Sparkle' to the store 'ponies'
+            a: $put('ponies', { name: 'Twilight Sparkle', type: 'unicorn' }),
+            // Will update the entry 'Twilight Sparkle', keeping the previous property 'type'
+            b: $update('ponies', { name: 'Twilight Sparkle', element: 'magic' }),
+            // Will remove 'Twilight Sparkle' from the store 'ponies'
+            c: $delete('ponies', 'Twilight Sparkle'),
+        }
+    })
 
-	return {
-		IDB: updateDb$,
-	}
+    return {
+        IDB: updateDb$,
+    }
+}
+```
+
+### Error handling
+
+The cycle-idb driver exposes an `error$` stream that broadcasts all errors that occur during any database writing operation. The error events contain the following data:
+- `store`: the name of the store being updated.
+- `query`: an object containing the property `operation` with the operation being performed and the property `data` with the object being updated.
+
+```javascript
+function main(sources) {
+    sources.IDB.error$
+        .addListener({
+            error: e => console.log(`Operation ${e.query.operation}(${e.query.data}) on store ${e.store} failed.`)
+        })
 }
 ```
