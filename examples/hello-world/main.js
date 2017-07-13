@@ -7,11 +7,11 @@ import makeIdbDriver, { $put } from 'cycle-idb'
 
 
 const PONIES = [
-	{ id: 2, name: 'Pinkie Pie', type: 'earth pony' },
-	{ id: 3, name: 'Applejack', type: 'earth pony' },
-	{ id: 4, name: 'Rainbow Dasy', type: 'pegasus' },
-	{ id: 5, name: 'Rarity', type: 'unicorn' },
-	{ id: 6, name: 'Fluttershy', type: 'pegasus' },
+	{ name: 'Pinkie Pie', type: 'earth pony' },
+	{ name: 'Applejack', type: 'earth pony' },
+	{ name: 'Rainbow Dasy', type: 'pegasus' },
+	{ name: 'Rarity', type: 'unicorn' },
+	{ name: 'Fluttershy', type: 'pegasus' },
 ]
 
 function main(sources) {
@@ -41,8 +41,8 @@ const drivers = {
 	IDB: makeIdbDriver('pony-db', 1, upgradeDb => {
 		switch (upgradeDb.oldVersion) {
 			case 0:
-				const store = upgradeDb.createObjectStore('ponies', { keyPath: 'id' })
-				store.put({ id: 1, name: 'Twilight Sparkle', type: 'unicorn' })
+				const store = upgradeDb.createObjectStore('ponies', { autoIncrement: true })
+				store.put({ name: 'Twilight Sparkle', type: 'unicorn' })
 		}	
 	}),
 	DOM: makeDOMDriver('#app'),
