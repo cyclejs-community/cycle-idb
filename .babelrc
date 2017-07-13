@@ -1,7 +1,4 @@
 {
-	"presets": [ "stage-0", ["env", {
-		"targets": {
-			"chrome": 57
-		}
-	}]]
+	"presets": [ "es2015" ],
+	"plugins": [ "transform-object-rest-spread" ]
 }
