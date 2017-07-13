@@ -9,9 +9,8 @@ export default function makeIdbDriver(name, version, upgrade) {
 
 	const BasicOperation = (operation) => async (store, data) => {
 		const db = await dbPromise
-		const tx = db.transaction(store, 'readwrite')
-		const storeObj = tx.objectStore(store)
-		await storeObj[operation](data)
+		await db.transaction(store, 'readwrite')
+			.objectStore(store)[operation](data)
 		return await tx.complete
 	}
 
@@ -119,9 +118,9 @@ function GetAllSelector(dbPromise, write$, name) {
 			.addListener({
 				next: async value => {
 					const db = await dbPromise
-					const tx = db.transaction(name)
-					const store = tx.objectStore(name)
-					const data = await store.getAll()
+					const data = await db.transaction(name)
+						.objectStore(name)
+						.getAll()
 					listener.next(data)
 				},
 				error: e => listener.error(e)
@@ -138,9 +137,9 @@ function CountSelector(dbPromise, write$, name) {
 			.addListener({
 				next: async value => {
 					const db = await dbPromise
-					const tx = db.transaction(name)
-					const store = tx.objectStore(name)
-					const count = await store.count()
+					const count = await db.transaction(name)
+						.objectStore(name)
+						.count()
 					listener.next(count)
 				},
 				error: e => listener.error(e)
