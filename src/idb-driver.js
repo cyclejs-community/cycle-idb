@@ -11,9 +11,10 @@ export default function makeIdbDriver(name, version, upgrade) {
 		const db = await dbPromise
 		const tx = db.transaction(store, 'readwrite')
 		const storeObj = tx.objectStore(store)
-		storeObj[operation](data)
+		await storeObj[operation](data)
 		return await tx.complete
 	}
+
 	const IDB_OPERATIONS = {
 		$put: BasicOperation('put'),
 		$delete: BasicOperation('delete'),
@@ -22,7 +23,7 @@ export default function makeIdbDriver(name, version, upgrade) {
 			const tx = db.transaction(store, 'readwrite')
 			const storeObj = tx.objectStore(store)
 			const oldValue = await storeObj.get(data[storeObj.keyPath])
-			storeObj.put({...oldValue, ...data})
+			await storeObj.put({...oldValue, ...data})
 			return await tx.complete
 		},
 	}
@@ -30,15 +31,23 @@ export default function makeIdbDriver(name, version, upgrade) {
 	return function idbDriver(write$) {
 		const stores = {}
 
+		const error$ = xs.never()
+
 		write$.addListener({
-			next: async ({ operation, store, data }) => {
-				return await IDB_OPERATIONS[operation](store, data)
+			next: ({ operation, store, data }) => {
+				return IDB_OPERATIONS[operation](store, data)
+					.catch(e => {
+						e.store = store
+						e.query = { operation, data }
+						error$.shamefullySendError(e)
+					})
 			},
 			error: () => {},
 			complete: () => {},
 		})
 
 		return {
+			error$,
 			store: name => ({
 				get: key => {
 					const hash = name + '#get#' + key

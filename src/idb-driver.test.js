@@ -280,6 +280,27 @@ test('IdbDriver.count() should send new count when an element is removed', t => 
 		]))
 })
 
+test('IdbDriver.$put should send an error when key is missing', t => {
+	t.plan(2)
+
+	process.on('unhandledRejection', e => t.fail(`Unhandled rejection: ${e}`))
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase())(
+		fromDiagram('-a--|', {
+			values: {
+				a: $put('ponies', { type: 'earth pony' }),
+			},
+			timeUnit: 20,
+		})
+	)
+	driver.error$.addListener({
+		error: e => {
+			t.deepEqual(e.query, { operation: '$put', data: { type: 'earth pony' }})
+			t.equal(e.store, 'ponies')
+		}
+	})
+})
+
 const sequenceListener = test => (listeners, bounded=true) => {
 	let current = 0
 	return {
