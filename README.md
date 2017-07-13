@@ -43,7 +43,8 @@ function main(sources) {
 	// This returns a stream that will emit an event every time the data in the 'ponies' store changes.
 	const allPonies$ = sources.IDB.store('ponies').getAll()
 
-	// This returns a stream that will emit an event every time the data in the 'ponies' store with the primary key 'Twilight Sparkle' changes.
+	// This returns a stream that will emit an event every time the data in the 'ponies' store
+	// with the primary key 'Twilight Sparkle' changes.
 	const twilight$ = sources.IDB.store('ponies').get('Twilight Sparkle')
 }
 ```
