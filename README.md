@@ -85,8 +85,11 @@ function main(sources) {
 ### Error handling
 
 The cycle-idb driver exposes an `error$` stream that broadcasts all errors that occur during any database writing operation. The error events contain the following data:
-- `store`: the name of the store being updated.
-- `query`: an object containing the property `operation` with the operation being performed and the property `data` with the object being updated.
+- `error`: the error thrown from IndexedDB.
+- `query`: an object containing the following properties:
+  - `operation`: the operation being performed (`'$put'`, `'$update'` or `'$delete'`).
+  - `data`: the data sent to the database operation.
+  - `store`: the name of the store being updated.
 
 ```javascript
 function main(sources) {
@@ -96,3 +99,19 @@ function main(sources) {
         })
 }
 ```
+
+Unfortunately, the exposed `error$` doesn't broadcast errors occurred during reading operations, as the error thrown when querying a store object that doesn't exist.
+
+To catch these errors, you need to add an error listener to the streams returned by the methods `get()`, `getAll()` and `count()` returned by `IDB.store(...)`.
+
+```javascript
+function main(sources) {
+    sources.IDB.store('not-found')
+        .getAll()
+        .addListener({
+            error: e => console.log(e)
+        })
+}
+```
+
+These listeners will also catch the errors raised by writing operations that affect the result of the query created by that method. This means that the stream returned by `store('ponies').get('Twilight Sparkle')` will also receive any error raised when updating the entry with the key `'Twilight Sparkle'`.
