@@ -308,12 +308,29 @@ test('Errors should not get propagated to multiple stores', t => {
 
 	driver.store('ponies').getAll()
 		.addListener({
-			error: e => t.fail('Unexpected error ' + e.error)
+			error: e => t.fail(`Unexpected error '${e.error}'`)
 		})
 	driver.store('more-ponies').getAll()
 		.addListener({
 			error: e => t.deepEqual(e.query, { operation: '$put', store: 'more-ponies', data: { type: 'pegasus' }})
 		})
+})
+
+test('Updates should not get propagated to multiple stores', t => {
+	t.plan(3)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase([], [
+		{ name: 'more-ponies', options: { keyPath: 'name' }}
+	]))(xs.of($put('ponies', { name: 'Twilight Sparkle', type: 'unicorn' })))
+
+	driver.store('ponies').getAll().addListener(sequenceListener(t)([
+		value => t.deepEqual(value, []),
+		value => t.deepEqual(value, [{ name: 'Twilight Sparkle', type: 'unicorn' }]),
+	]))
+	driver.store('more-ponies').getAll().addListener(sequenceListener(t)([
+		value => t.deepEqual(value, []),
+		value => t.fail(`Unexpected value '${value}'`)
+	]))
 })
 
 const sequenceListener = test => (listeners, bounded=true) => {

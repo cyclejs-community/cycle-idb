@@ -36,14 +36,14 @@ function executeDbUpdate({ dbOperation, operation, store, data }) {
 		complete: () => {},
 		error: () => {},
 	})
+	result$._store = store
 	return adapt(result$)
 }
 
-function createResult$(dbPromise, dbOperations, write$) {
-	const result$$ = write$
+function createResult$$(dbPromise, dbOperations, write$) {
+	return write$
 		.map(({ operation, store, data }) => ({ dbOperation: dbOperations[operation], operation, store, data }))
 		.map(executeDbUpdate)
-	return flattenConcurrently(result$$)
 }
 
 export default function makeIdbDriver(name, version, upgrade) {
@@ -67,26 +67,26 @@ export default function makeIdbDriver(name, version, upgrade) {
 
 		const error$ = xs.never()
 
-		const result$ = createResult$(dbPromise, IDB_OPERATIONS, write$)
+		const result$$ = createResult$$(dbPromise, IDB_OPERATIONS, write$)
 
 		return {
 			error$,
 			store: name => ({
 				get: key => {
 					const hash = name + '#get#' + key
-					const selector = stores[hash] || GetSelector(dbPromise, result$, name, key)
+					const selector = stores[hash] || GetSelector(dbPromise, result$$, name, key)
 					stores[hash] = selector
 					return selector
 				},
 				getAll: () => {
 					const hash = name + '#getAll'
-					const selector = stores[hash] || GetAllSelector(dbPromise, result$, name)
+					const selector = stores[hash] || GetAllSelector(dbPromise, result$$, name)
 					stores[hash] = selector
 					return selector
 				},
 				count: () => {
 					const hash = name + '#count'
-					const selector = stores[hash] || CountSelector(dbPromise, result$, name)
+					const selector = stores[hash] || CountSelector(dbPromise, result$$, name)
 					stores[hash] = selector
 					return selector
 				}
@@ -107,10 +107,11 @@ export function $update(store, data) {
 	return { store, data: data, operation: '$update' }
 }
 
-function GetSelector(dbPromise, result$, name, key) {
+function GetSelector(dbPromise, result$$, name, key) {
 	return adapt(xs.createWithMemory({
-		start: listener => result$
-			.filter(({ store }) => store === name)
+		start: listener => flattenConcurrently(result$$
+			.filter($ => $._store === name))
+			//.filter(({ store }) => store === name)
 			.filter(({ updatedKey }) => updatedKey === key)
 			.startWith(name)
 			.addListener({
@@ -127,10 +128,11 @@ function GetSelector(dbPromise, result$, name, key) {
 	}))
 }
 
-function GetAllSelector(dbPromise, result$, name) {
+function GetAllSelector(dbPromise, result$$, name) {
 	return adapt(xs.createWithMemory({
-		start: listener => result$
-			.filter(({ store }) => store === name)
+		start: listener => flattenConcurrently(result$$
+			.filter($ => $._store === name))
+			//.filter(({ store }) => store === name)
 			.startWith(name)
 			.addListener({
 				next: async value => {
@@ -146,10 +148,11 @@ function GetAllSelector(dbPromise, result$, name) {
 	}))
 }
 
-function CountSelector(dbPromise, result$, name) {
+function CountSelector(dbPromise, result$$, name) {
 	return adapt(xs.createWithMemory({
-		start: listener => result$
-			.filter(({ store }) => store === name)
+		start: listener => flattenConcurrently(result$$
+			.filter($ => $._store === name))
+			//.filter(({ store }) => store === name)
 			.startWith(name)
 			.addListener({
 				next: async value => {
