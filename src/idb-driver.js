@@ -1,4 +1,7 @@
 import xs from 'xstream'
+import flattenConcurrently from 'xstream/extra/flattenConcurrently'
+import dropRepeats from 'xstream/extra/dropRepeats'
+
 import { adapt } from '@cycle/run/lib/adapt'
 
 import idb from 'idb'
@@ -7,62 +10,42 @@ import idb from 'idb'
 export default function makeIdbDriver(name, version, upgrade) {
 	const dbPromise = idb.open(name, version, upgrade)
 
-	const BasicOperation = (operation) => async (store, data) => {
-		const db = await dbPromise
-		await db.transaction(store, 'readwrite')
-			.objectStore(store)[operation](data)
-		return await tx.complete
-	}
-
-	const IDB_OPERATIONS = {
-		$put: BasicOperation('put'),
-		$delete: BasicOperation('delete'),
+	const dbOperations = {
+		$put: WriteOperation(dbPromise, 'put'),
+		$delete: WriteOperation(dbPromise, 'delete'),
 		$update: async (store, data) => {
 			const db = await dbPromise
 			const tx = db.transaction(store, 'readwrite')
 			const storeObj = tx.objectStore(store)
 			const oldValue = await storeObj.get(data[storeObj.keyPath])
-			await storeObj.put({...oldValue, ...data})
-			return await tx.complete
+			return await storeObj.put({...oldValue, ...data})
 		},
 	}
 
 	return function idbDriver(write$) {
 		const stores = {}
-
-		const error$ = xs.never()
-
-		write$.addListener({
-			next: ({ operation, store, data }) => {
-				return IDB_OPERATIONS[operation](store, data)
-					.catch(e => {
-						e.store = store
-						e.query = { operation, data }
-						error$.shamefullySendError(e)
-					})
-			},
-			error: () => {},
-			complete: () => {},
-		})
+		const result$$ = createResult$$(dbPromise, dbOperations, write$)
+		const error$ = createError$(result$$)
 
 		return {
 			error$,
 			store: name => ({
 				get: key => {
 					const hash = name + '#get#' + key
-					const selector = stores[hash] || GetSelector(dbPromise, write$, name, key)
+					const selector = stores[hash] || GetSelector(dbPromise, result$$, name, key)
 					stores[hash] = selector
 					return selector
 				},
 				getAll: () => {
 					const hash = name + '#getAll'
-					const selector = stores[hash] || GetAllSelector(dbPromise, write$, name)
+					const selector = stores[hash] || GetAllSelector(dbPromise, result$$, name)
 					stores[hash] = selector
 					return selector
 				},
 				count: () => {
 					const hash = name + '#count'
-					const selector = stores[hash] || CountSelector(dbPromise, write$, name)
+					const selector = stores[hash] || CountSelector(dbPromise, result$$, name)
+						.compose(dropRepeats())
 					stores[hash] = selector
 					return selector
 				}
@@ -83,26 +66,67 @@ export function $update(store, data) {
 	return { store, data: data, operation: '$update' }
 }
 
-function GetSelector(dbPromise, write$, name, key) {
+const WriteOperation = (dbPromise, operation) => async (store, data) => {
+	const db = await dbPromise
+	return await db.transaction(store, 'readwrite')
+		.objectStore(store)[operation](data)
+}
+
+function executeDbUpdate({ dbOperation, operation, store, data }) {
+	const result$ = xs.createWithMemory({
+		start: listener => {
+			dbOperation(store, data)
+				.then(result => {
+					listener.next({
+						updatedKey: result || data, // $delete returns 'undefined', but then the key is in 'data'
+						store
+					})
+					listener.complete()
+				})
+				.catch(error => listener.error({
+					error,
+					query: { store, data, operation },
+				}))
+		},
+		stop: () => {},
+	})
+	result$.addListener({
+		next: () => {},
+		complete: () => {},
+		error: () => {},
+	})
+	result$._store = store
+	return adapt(result$)
+}
+
+function createResult$$(dbPromise, dbOperations, write$) {
+	return write$
+		.map(({ operation, store, data }) => ({ dbOperation: dbOperations[operation], operation, store, data }))
+		.map(executeDbUpdate)
+}
+
+function createError$(result$$) {
+	return flattenConcurrently(result$$)
+		.filter(_ => false)
+}
+
+function GetSelector(dbPromise, result$$, name, key) {
 	return adapt(xs.createWithMemory({
-		start: listener => write$
-			.filter(({ store }) => store === name)
+		start: listener => flattenConcurrently(result$$
+				.filter($ => $._store === name))
+			.filter(({ updatedKey }) => updatedKey === key)
 			.startWith(name)
 			.addListener({
 				next: async value => {
-					const db = await dbPromise
-					const tx = db.transaction(name)
-					const store = tx.objectStore(name)
-					const keyPath = store.keyPath
-
-					if (value !== name 
-						&& value.data[keyPath] !== key
-						&& value.data !== key
-					) {
-						return
+					try {
+						const db = await dbPromise
+						const data = await db.transaction(name)
+							.objectStore(name)
+							.get(key)
+						listener.next(data)
+					} catch (e) {
+						listener.error(e)
 					}
-					const data = await store.get(key)
-					listener.next(data)
 				},
 				error: e => listener.error(e)
 			}),
@@ -110,18 +134,22 @@ function GetSelector(dbPromise, write$, name, key) {
 	}))
 }
 
-function GetAllSelector(dbPromise, write$, name) {
+function GetAllSelector(dbPromise, result$$, name) {
 	return adapt(xs.createWithMemory({
-		start: listener => write$
-			.filter(({ store }) => store === name)
+		start: listener => flattenConcurrently(result$$
+				.filter($ => $._store === name))
 			.startWith(name)
 			.addListener({
 				next: async value => {
-					const db = await dbPromise
-					const data = await db.transaction(name)
-						.objectStore(name)
-						.getAll()
-					listener.next(data)
+					try {
+						const db = await dbPromise
+						const data = await db.transaction(name)
+							.objectStore(name)
+							.getAll()
+						listener.next(data)
+					} catch (e) {
+						listener.error(e)
+					}
 				},
 				error: e => listener.error(e)
 			}),
@@ -129,18 +157,22 @@ function GetAllSelector(dbPromise, write$, name) {
 	}))
 }
 
-function CountSelector(dbPromise, write$, name) {
+function CountSelector(dbPromise, result$$, name) {
 	return adapt(xs.createWithMemory({
-		start: listener => write$
-			.filter(({ store }) => store === name)
+		start: listener => flattenConcurrently(result$$
+				.filter($ => $._store === name))
 			.startWith(name)
 			.addListener({
 				next: async value => {
-					const db = await dbPromise
-					const count = await db.transaction(name)
-						.objectStore(name)
-						.count()
-					listener.next(count)
+					try {
+						const db = await dbPromise
+						const count = await db.transaction(name)
+							.objectStore(name)
+							.count()
+						listener.next(count)
+					} catch (e) {
+						listener.error(e)
+					}
 				},
 				error: e => listener.error(e)
 			}),

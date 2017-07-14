@@ -281,7 +281,7 @@ test('IdbDriver.count() should send new count when an element is removed', t => 
 })
 
 test('IdbDriver.$put should send an error when key is missing', t => {
-	t.plan(2)
+	t.plan(1)
 
 	process.on('unhandledRejection', e => t.fail(`Unhandled rejection: ${e}`))
 
@@ -293,12 +293,108 @@ test('IdbDriver.$put should send an error when key is missing', t => {
 			timeUnit: 20,
 		})
 	)
+	driver.store('ponies').getAll()
+		.addListener({
+			error: e => t.deepEqual(e.query, { operation: '$put', store: 'ponies', data: { type: 'earth pony' }})
+		})
+})
+
+test('Errors should not get propagated to multiple stores', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase([], [
+		{ name: 'more-ponies', options: { keyPath: 'name' }}
+	]))(xs.of($put('more-ponies', { type: 'pegasus' })))
+
+	driver.store('ponies').getAll()
+		.addListener({
+			error: e => t.fail(`Unexpected error '${e.error}'`)
+		})
+	driver.store('more-ponies').getAll()
+		.addListener({
+			error: e => t.deepEqual(e.query, { operation: '$put', store: 'more-ponies', data: { type: 'pegasus' }})
+		})
+})
+
+test('Updates should not get propagated to multiple stores', t => {
+	t.plan(3)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase([], [
+		{ name: 'more-ponies', options: { keyPath: 'name' }}
+	]))(xs.of($put('ponies', { name: 'Twilight Sparkle', type: 'unicorn' })))
+
+	driver.store('ponies').getAll().addListener(sequenceListener(t)([
+		value => t.deepEqual(value, []),
+		value => t.deepEqual(value, [{ name: 'Twilight Sparkle', type: 'unicorn' }]),
+	]))
+	driver.store('more-ponies').getAll().addListener(sequenceListener(t)([
+		value => t.deepEqual(value, []),
+		value => t.fail(`Unexpected value '${value}'`)
+	]))
+})
+
+test('Opening a store that doesn\t exist should generate an error', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase())(xs.never())
+
+	process.on('unhandledRejection', e => t.fail(`Unhandled rejection: ${e}`))
+
+	driver.store('not-found').getAll()
+		.addListener({
+			next: value => t.fail(value),
+			error: e => t.deepEqual(e, {
+				name: 'NotFoundError',
+				message: 'No objectStore named not-found in this database'
+			})
+		})
+})
+
+test('Update errors should be propagated to error$', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase())(xs.of(
+		$put('ponies', { type: 'pegasus' }),
+	))
+
 	driver.error$.addListener({
-		error: e => {
-			t.deepEqual(e.query, { operation: '$put', data: { type: 'earth pony' }})
-			t.equal(e.store, 'ponies')
-		}
+		error: e => t.deepEqual(e.query, $put('ponies', { type: 'pegasus' }))
 	})
+})
+
+test('error$ should not propagate regular events', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase())(xs.of(
+		$put('ponies', { name: 'Fluttershy', type: 'pegasus' }),
+	))
+
+	driver.error$.addListener({
+		next: value => t.fail(`Received unexpected value '${value}'`)
+	})
+	driver.store('ponies').getAll().drop(1).addListener(sequenceListener(t)([
+		value => t.deepEqual(value, [{ name: 'Fluttershy', type: 'pegasus' }]),
+	]))
+})
+
+test('IdbDriver.count() should only broadcast when count changes', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase([
+		{ name: 'Fluttershy', type: 'pegasus' },
+	]))(fromDiagram('-a-b--|', {
+		values: {
+			a: $put('ponies', { name: 'Fluttershy', type: 'pegasus', element: 'kindness' }),
+			b: $put('ponies', { name: 'Applejack', type: 'earth pony' }),
+		},
+		timeUnit: 20,
+	}))
+
+	driver.store('ponies').count().addListener(sequenceListener(t)([
+		value => t.equal(value, 1),
+		value => t.equal(value, 2),
+		value => t.fail('Too many events'),
+	]))
 })
 
 const sequenceListener = test => (listeners, bounded=true) => {

@@ -11,9 +11,10 @@ export function mockIdb(idb, mocks) {
 	return idb
 }
 
-export function mockDatabase(entries=[]) {
+export function mockDatabase(entries=[], stores=[]) {
 	return (upgradeDb) => {
 		const ponies = upgradeDb.createObjectStore('ponies', { keyPath: 'name' })
 		entries.forEach(e => ponies.put(e))
+		stores.forEach(s => upgradeDb.createObjectStore(s.name, s.options))
 	}
 }
