@@ -281,7 +281,7 @@ test('IdbDriver.count() should send new count when an element is removed', t => 
 })
 
 test('IdbDriver.$put should send an error when key is missing', t => {
-	t.plan(2)
+	t.plan(1)
 
 	process.on('unhandledRejection', e => t.fail(`Unhandled rejection: ${e}`))
 
@@ -293,12 +293,27 @@ test('IdbDriver.$put should send an error when key is missing', t => {
 			timeUnit: 20,
 		})
 	)
-	driver.error$.addListener({
-		error: e => {
-			t.deepEqual(e.query, { operation: '$put', data: { type: 'earth pony' }})
-			t.equal(e.store, 'ponies')
-		}
-	})
+	driver.store('ponies').getAll()
+		.addListener({
+			error: e => t.deepEqual(e.query, { operation: '$put', store: 'ponies', data: { type: 'earth pony' }})
+		})
+})
+
+test('Errors should not get propagated to multiple stores', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase([], [
+		{ name: 'more-ponies', options: { keyPath: 'name' }}
+	]))(xs.of($put('more-ponies', { type: 'pegasus' })))
+
+	driver.store('ponies').getAll()
+		.addListener({
+			error: e => t.fail('Unexpected error ' + e.error)
+		})
+	driver.store('more-ponies').getAll()
+		.addListener({
+			error: e => t.deepEqual(e.query, { operation: '$put', store: 'more-ponies', data: { type: 'pegasus' }})
+		})
 })
 
 const sequenceListener = test => (listeners, bounded=true) => {
