@@ -397,6 +397,22 @@ test('IdbDriver.count() should only broadcast when count changes', t => {
 	]))
 })
 
+test.skip('The read event fired after a DB update event should contain only the data updated by that event', t => {
+	t.plan(4)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase())(xs.of(
+		$put('ponies', { name: 'Twilight Sparkle', type: 'unicorn' }),
+		$update('ponies', { name: 'Twilight Sparkle', element: 'magic' }),
+		$update('ponies', { name: 'Twilight Sparkle', type: 'alicorn' }),
+	))
+	driver.store('ponies').get('Twilight Sparkle').addListener(sequenceListener(t)([
+		value => t.deepEqual(value, undefined),
+		value => t.deepEqual(value, { name: 'Twilight Sparkle', type: 'unicorn' }),
+		value => t.deepEqual(value, { name: 'Twilight Sparkle', type: 'unicorn', element: 'magic' }),
+		value => t.deepEqual(value, { name: 'Twilight Sparkle', type: 'alicorn', element: 'magic' }),
+	]))
+})
+
 const sequenceListener = test => (listeners, bounded=true) => {
 	let current = 0
 	return {
