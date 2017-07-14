@@ -114,4 +114,4 @@ function main(sources) {
 }
 ```
 
-These listeners will also catch the errors raised by writing operations that affect the result of the query created by that method. This means that the stream returned by `store('ponies').get('Twilight Sparkle')` will also receive any error raised when updating the entry with the key `'Twilight Sparkle'`.
+These listeners will also catch the errors raised by writing operations that affect the result of the query created by that method. This means that the stream returned by `store('ponies').get('Twilight Sparkle')` will also receive any error raised when updating the entry with the key `'Twilight Sparkle'`, and the streams returned by `store('ponies').getAll()` and `store('ponies').count()` will receive any error raised when updating the `'ponies'` store.
