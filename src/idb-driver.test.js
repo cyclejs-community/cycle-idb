@@ -333,6 +333,50 @@ test('Updates should not get propagated to multiple stores', t => {
 	]))
 })
 
+test('Opening a store that doesn\t exist should generate an error', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase())(xs.never())
+
+	process.on('unhandledRejection', e => t.fail(`Unhandled rejection: ${e}`))
+
+	driver.store('not-found').getAll()
+		.addListener({
+			next: value => t.fail(value),
+			error: e => t.deepEqual(e, {
+				name: 'NotFoundError',
+				message: 'No objectStore named not-found in this database'
+			})
+		})
+})
+
+test('Update errors should be propagated to error$', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase())(xs.of(
+		$put('ponies', { type: 'pegasus' }),
+	))
+
+	driver.error$.addListener({
+		error: e => t.deepEqual(e.query, $put('ponies', { type: 'pegasus' }))
+	})
+})
+
+test('error$ should not propagate regular events', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase())(xs.of(
+		$put('ponies', { name: 'Fluttershy', type: 'pegasus' }),
+	))
+
+	driver.error$.addListener({
+		next: value => t.fail(`Received unexpected value '${value}'`)
+	})
+	driver.store('ponies').getAll().drop(1).addListener(sequenceListener(t)([
+		value => t.deepEqual(value, [{ name: 'Fluttershy', type: 'pegasus' }]),
+	]))
+})
+
 const sequenceListener = test => (listeners, bounded=true) => {
 	let current = 0
 	return {
