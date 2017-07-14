@@ -1,5 +1,6 @@
 import xs from 'xstream'
 import flattenConcurrently from 'xstream/extra/flattenConcurrently'
+import dropRepeats from 'xstream/extra/dropRepeats'
 
 import { adapt } from '@cycle/run/lib/adapt'
 
@@ -44,6 +45,7 @@ export default function makeIdbDriver(name, version, upgrade) {
 				count: () => {
 					const hash = name + '#count'
 					const selector = stores[hash] || CountSelector(dbPromise, result$$, name)
+						.compose(dropRepeats())
 					stores[hash] = selector
 					return selector
 				}

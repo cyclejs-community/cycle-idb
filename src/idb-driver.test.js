@@ -377,6 +377,26 @@ test('error$ should not propagate regular events', t => {
 	]))
 })
 
+test('IdbDriver.count() should only broadcast when count changes', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase([
+		{ name: 'Fluttershy', type: 'pegasus' },
+	]))(fromDiagram('-a-b--|', {
+		values: {
+			a: $put('ponies', { name: 'Fluttershy', type: 'pegasus', element: 'kindness' }),
+			b: $put('ponies', { name: 'Applejack', type: 'earth pony' }),
+		},
+		timeUnit: 20,
+	}))
+
+	driver.store('ponies').count().addListener(sequenceListener(t)([
+		value => t.equal(value, 1),
+		value => t.equal(value, 2),
+		value => t.fail('Too many events'),
+	]))
+})
+
 const sequenceListener = test => (listeners, bounded=true) => {
 	let current = 0
 	return {
