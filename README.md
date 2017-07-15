@@ -1,7 +1,11 @@
 # cycle-idb
-A cycle driver for IndexedDB. It uses [idb](https://github.com/jakearchibald/idb) to interface with IndexedDB. If you need more details about working with IndexedDB, the [Google Developers Guide](https://developers.google.com/web/ilt/pwa/working-with-indexeddb) is a good place to start.
+A [cyclejs](https://github.com/cyclejs/cyclejs) driver for IndexedDB. It uses [idb](https://github.com/jakearchibald/idb) to interface with IndexedDB. If you need more details about working with IndexedDB, the [Google Developers Guide](https://developers.google.com/web/ilt/pwa/working-with-indexeddb) is a good place to start.
 
 **Warning:** this library is in early development phase. It hasn't been tested extensively and only provides a subset of the operations available for IndexedDB. Use at your own risk.
+
+- [Installation](#installation)
+- [Usage](#usage)
+- [Planned features](#planned-features)
 
 ## Installation
 
@@ -12,7 +16,7 @@ $ npm i cycle-idb
 
 ## Usage
 
-Take a look at the [examples](examples) folder for a complete sample.
+Take a look at the [examples](examples) folder for complete samples.
 
 - [Create IDB driver](#create-idb-driver)
 - [Query data](#query-data)
