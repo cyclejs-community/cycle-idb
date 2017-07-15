@@ -41,12 +41,12 @@ export function $update(store, data) {
 }
 
 function updatedIndexes(storeObj, old, data) {
-	return storeObj.indexNames
+	return Array.from(storeObj.indexNames)
 		.map(index => {
 			const indexKeyPath = storeObj.index(index).keyPath
 			return {
 				index,
-				oldValue: old[indexKeyPath],
+				oldValue: (old || {})[indexKeyPath],
 				newValue: data.hasOwnProperty(indexKeyPath) ? data[indexKeyPath] : old[indexKeyPath]
 			}
 		})
