@@ -14,6 +14,12 @@ $ npm i cycle-idb
 
 Take a look at the [examples](examples) folder for a complete sample.
 
+- [Create IDB driver](#create-idb-driver)
+- [Query data](#query-data)
+- [Update data](#update-data)
+- [Indexes](#indexes)
+- [Error handling](#error-handling)
+
 ### Create IDB driver
 
 The function `makeIdbDriver` accepts three arguments.
@@ -82,6 +88,44 @@ function main(sources) {
 }
 ```
 
+### Indexes
+
+Indexes allow to sort the data in a store according to a particular property or to query only a subset of the data.
+
+#### Create indexes
+
+Indexes are created in the upgrade function passed to `makeIdbDriver`. The created store objects expose the method `createIndex(indexName, keyPath, options)`, which is used for that purpose.
+
+- `indexName`: the name that will be used to query that specific index.
+- `keyPath`: the stuff.
+- `options`: an optional object with a few extra options.
+
+You can check the documentation in [IDBObjectStore.createIndex](https://developer.mozilla.org/en-US/docs/Web/API/IDBObjectStore/createIndex) for additional details.
+
+```javascript
+makeIdbDriver('pony-db', 1, upgradeDb => {
+    const ponyStore = upgradeDb.createObjectStore('ponies', { keyPath: 'name' })
+    ponyStore.createIndex('type', 'type')
+})
+```
+
+#### Subscribe to indexes
+
+The `store` method in the `IDBDriver` exposes the `index` selector, which can be used to select a specific index in the selected store.
+
+```javascript
+const ponyTypeIndex = sources.IDB.store('ponies').index('type')
+```
+
+The index selector returns an object with the following methods:
+- `getAll`: returns a stream subscribed to all items in the store, sorted by the selected index. This method accepts an optional `key` argument. If provided, it will only subscribe to the items where the index property equals the provided key.
+
+```javascript
+const ponyTypeIndex = sources.IDB.store('ponies').index('type')
+const poniesByType = ponyTypeIndex.getAll() // This returns a stream subscribed to all ponies, sorted by 'type'
+const unicorns = ponyTypeIndex.getAll('unicorn') // This returns a stream subscribed only to the ponies of type 'unicorn'
+```
+
 ### Error handling
 
 The cycle-idb driver exposes an `error$` stream that broadcasts all errors that occur during any database writing operation. The error events contain the following data:
@@ -115,3 +159,24 @@ function main(sources) {
 ```
 
 These listeners will also catch the errors raised by writing operations that affect the result of the query created by that method. This means that the stream returned by `store('ponies').get('Twilight Sparkle')` will also receive any error raised when updating the entry with the key `'Twilight Sparkle'`, and the streams returned by `store('ponies').getAll()` and `store('ponies').count()` will receive any error raised when updating the `'ponies'` store.
+
+## Planned features
+
+- [ ] Store selectors
+  - [x] get
+  - [x] getAll
+  - [x] count
+  - [ ] getAllKeys
+- [ ] Update operations
+  - [x] put
+  - [x] delete
+  - [x] update
+  - [ ] add
+  - [ ] clear
+- [ ] Index selectors
+  - [x] getAll
+  - [ ] get
+  - [ ] getKey
+  - [ ] getAllKeys
+  - [ ] count
+- [ ] Support for cursors
