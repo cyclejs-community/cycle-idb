@@ -620,6 +620,27 @@ test('index(...).getAll(key) should not get updates when an element with differe
 		]))
 })
 
+test('Calling index(...) multiple times should return the same object', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithIndex())(xs.never())
+	const ponyStore = driver.store('ponies')
+	const index_1 = ponyStore.index('type')
+	const index_2 = ponyStore.index('type')
+
+	t.equal(index_1, index_2)
+})
+
+test('Calling store(...) multiple times with the same name should return the same object', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase())(xs.never())
+	const store_1 = driver.store('ponies')
+	const store_2 = driver.store('ponies')
+
+	t.equal(store_1, store_2)
+})
+
 test.skip('The read event fired after a DB update event should contain only the data updated by that event', t => {
 	t.plan(4)
 

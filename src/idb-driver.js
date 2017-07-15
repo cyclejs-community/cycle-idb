@@ -6,6 +6,7 @@ import { adapt } from '@cycle/run/lib/adapt'
 import idb from 'idb'
 
 import Store from './Store'
+import { MultiKeyCache } from './cache'
 
 
 export default function makeIdbDriver(name, version, upgrade) {
@@ -23,7 +24,7 @@ export default function makeIdbDriver(name, version, upgrade) {
 
 		return {
 			error$,
-			store: name => Store(dbPromise, result$$, name),
+			store: MultiKeyCache(name => Store(dbPromise, result$$, name)),
 		}
 	}
 }
