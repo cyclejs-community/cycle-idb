@@ -27,6 +27,44 @@ export default function Store(dbPromise, result$$, name) {
 				.compose(dropRepeats())
 			cache[hash] = selector
 			return selector
+		},
+		index: indexName => {
+			const hash = 'index#' + name
+			const selector = cache[hash] || IndexSelector(dbPromise, result$$, name, indexName)
+			cache[hash] = selector
+			return selector
+		},
+	}
+}
+
+function IndexSelector(dbPromise, result$$, storeName, indexName) {
+	const cache = {}
+
+	return {
+		getAll: key => {
+			const hash = 'getAll#' + key
+			const selector = cache[hash] || adapt(xs.createWithMemory({
+				start: listener => flattenConcurrently(result$$.filter($ => $._store === storeName))
+					.startWith(storeName)
+					.addListener({
+						next: async value => {
+							try {
+								const db = await dbPromise
+								const data = await db.transaction(storeName)
+									.objectStore(storeName)
+									.index(indexName)
+									.getAll(key)
+								listener.next(data)
+							} catch (e) {
+								listener.error(e)
+							}
+						},
+						error: e => listener.error(e),
+					}),
+				stop: () => {},
+			}))
+			cache[hash] = selector
+			return selector
 		}
 	}
 }
@@ -35,15 +73,15 @@ function GetSelector(dbPromise, result$$, name, key) {
 	return adapt(xs.createWithMemory({
 		start: listener => flattenConcurrently(result$$
 				.filter($ => $._store === name))
-			.filter(({ updatedKey }) => updatedKey === key)
+			.filter(({ result }) => result.key === key)
 			.startWith(name)
 			.addListener({
 				next: async value => {
 					try {
 						const db = await dbPromise
 						const data = await db.transaction(name)
-						.objectStore(name)
-						.get(key)
+							.objectStore(name)
+							.get(key)
 						listener.next(data)
 					} catch (e) {
 						listener.error(e)

@@ -7,6 +7,7 @@ import fromDiagram from 'xstream/extra/fromDiagram'
 import { 
 	mockIdb,
 	mockDatabase,
+	mockDbWithIndex,
 } from './idb-driver.mock'
 import idb from 'idb'
 
@@ -283,7 +284,7 @@ test('IdbDriver.count() should send new count when an element is removed', t => 
 test('IdbDriver.$put should send an error when key is missing', t => {
 	t.plan(1)
 
-	process.on('unhandledRejection', e => t.fail(`Unhandled rejection: ${e}`))
+	//process.on('unhandledRejection', e => t.fail(`Unhandled rejection: ${e}`))
 
 	const driver = makeIdbDriver(getTestId(), 1, mockDatabase())(
 		fromDiagram('-a--|', {
@@ -333,7 +334,7 @@ test('Updates should not get propagated to multiple stores', t => {
 	]))
 })
 
-test('Opening a store that doesn\t exist should generate an error', t => {
+test('Opening a store that doesn\'t exist should generate an error', t => {
 	t.plan(1)
 
 	const driver = makeIdbDriver(getTestId(), 1, mockDatabase())(xs.never())
@@ -395,6 +396,99 @@ test('IdbDriver.count() should only broadcast when count changes', t => {
 		value => t.equal(value, 2),
 		value => t.fail('Too many events'),
 	]))
+})
+
+test('index(...).getAll() should get all the elements sorted by index', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithIndex([
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+		{ name: 'Rarity', type: 'unicorn' },
+		{ name: 'Applejack', type: 'earth pony' },
+	]))(xs.never())
+	driver.store('ponies').index('name').getAll().addListener({
+		next: value => t.deepEqual(value, [
+			{ name: 'Applejack', type: 'earth pony' },
+			{ name: 'Rarity', type: 'unicorn' },
+			{ name: 'Twilight Sparkle', type: 'unicorn' },
+		])
+	})
+})
+
+test('index(...).getAll(key) should get all the elements with the given key', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithIndex([
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+		{ name: 'Rarity', type: 'unicorn' },
+		{ name: 'Applejack', type: 'earth pony' },
+	]))(xs.never())
+	driver.store('ponies').index('type').getAll('unicorn').addListener({
+		next: value => t.deepEqual(value, [
+			{ name: 'Twilight Sparkle', type: 'unicorn' },
+			{ name: 'Rarity', type: 'unicorn' },
+		])
+	})
+})
+
+test('IdbDriver.$put should fail when inserting duplicated value for unique index', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithIndex([
+		{ name: 'Applejack' },
+	]))(xs.of(
+		$put('ponies', { name: 'Applejack' })
+	))
+
+	driver.store('ponies').getAll().drop(1).addListener({
+		next: value => t.fail(`Unexpected data: ${JSON.stringify(value)}`),
+		error: e => t.deepEqual(e.query, { store: 'ponies', operation: '$put', data: { name: 'Applejack' }}),
+	})
+})
+
+test('index(...).getAll() should get updates when element is modified', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithIndex())(xs.of(
+		$put('ponies', { name: 'Applejack', type: 'earth pony' })
+	))
+
+	driver.store('ponies').index('name').getAll().addListener(sequenceListener(t)([
+		value => t.deepEqual(value, []),
+		value => t.deepEqual(value, [{ name: 'Applejack', type: 'earth pony' }]),
+	]))
+})
+
+test('index(...).getAll(key) should get updates when element with key is inserted', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithIndex())(xs.of(
+		$put('ponies', { name: 'Twilight Sparkle', type: 'unicorn' })
+	))
+
+	driver.store('ponies').index('type').getAll('unicorn').addListener(sequenceListener(t)([
+		value => t.deepEqual(value, []),
+		value => t.deepEqual(value, [{ name: 'Twilight Sparkle', type: 'unicorn' }])
+	]))
+})
+
+test('index(...).getAll(key) should get updates when element with key is modified', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithIndex([
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+	]))(xs.of(
+		$put('ponies', { name: 'Twilight Sparkle', type: 'unicorn', element: 'magic' })
+	))
+
+	driver.store('ponies').index('type').getAll('unicorn').addListener(sequenceListener(t)([
+		value => t.deepEqual(value, [{ name: 'Twilight Sparkle', type: 'unicorn' }]),
+		value => t.deepEqual(value, [{ name: 'Twilight Sparkle', type: 'unicorn', element: 'magic' }])
+	]))
+})
+
+test('index(...).getAll(key) should not get updates when element with different key is modified', t => {
+	t.end()
 })
 
 test.skip('The read event fired after a DB update event should contain only the data updated by that event', t => {

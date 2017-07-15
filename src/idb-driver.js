@@ -19,7 +19,15 @@ export default function makeIdbDriver(name, version, upgrade) {
 			const tx = db.transaction(store, 'readwrite')
 			const storeObj = tx.objectStore(store)
 			const oldValue = await storeObj.get(data[storeObj.keyPath])
-			return await storeObj.put({...oldValue, ...data})
+			const modifiedIndexes = updatedIndexes(storeObj, oldValue, data)
+			const [ result, _ ] = await Promise.all([
+				storeObj.put({...oldValue, ...data}),
+				tx.complete
+			])
+			return {
+				key: result,
+				indexes: modifiedIndexes
+			}
 		},
 	}
 
@@ -46,15 +54,44 @@ export function $update(store, data) {
 	return { store, data: data, operation: '$update' }
 }
 
+function updatedIndexes(storeObj, old, data) {
+	return storeObj.indexNames
+		.map(index => {
+			const indexKeyPath = storeObj.index(index).keyPath
+			return {
+				index,
+				oldValue: old[indexKeyPath],
+				newValue: data.hasOwnProperty(indexKeyPath) ? data[indexKeyPath] : old[indexKeyPath]
+			}
+		})
+		.reduce((acc, { index, oldValue, newValue }) => {
+			const entry = acc[index] || []
+			[oldValue, newValue].forEach(v => {
+				if (!v in entry) entry.push(v)
+			})
+			acc[index] = entry
+			return acc
+		}, {})
+}
+
 const WriteOperation = (dbPromise, operation) => async (store, data) => {
 	const db = await dbPromise
 	const tx = db.transaction(store, 'readwrite')
+	const storeObj = tx.objectStore(store)
 
+	const key = operation === 'delete' ? data : data[storeObj.keyPath]
+	const old = await storeObj.get(key)
+
+	const modifiedIndexes = updatedIndexes(storeObj, old, data)
+	console.log('Modified', modifiedIndexes)
 	const [ result, _ ] = await Promise.all([
-		tx.objectStore(store)[operation](data),
+		storeObj[operation](data),
 		tx.complete
 	])
-	return result
+	return {
+		key: result || data, // $delete returns 'undefined', but then the key is in 'data'
+		indexes: modifiedIndexes
+	}
 }
 
 function executeDbUpdate({ dbOperation, operation, store, data }) {
@@ -63,7 +100,7 @@ function executeDbUpdate({ dbOperation, operation, store, data }) {
 			dbOperation(store, data)
 				.then(result => {
 					listener.next({
-						updatedKey: result || data, // $delete returns 'undefined', but then the key is in 'data'
+						result,
 						store
 					})
 					listener.complete()

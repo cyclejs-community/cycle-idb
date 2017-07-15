@@ -12,9 +12,18 @@ export function mockIdb(idb, mocks) {
 }
 
 export function mockDatabase(entries=[], stores=[]) {
-	return (upgradeDb) => {
+	return upgradeDb => {
 		const ponies = upgradeDb.createObjectStore('ponies', { keyPath: 'name' })
 		entries.forEach(e => ponies.put(e))
 		stores.forEach(s => upgradeDb.createObjectStore(s.name, s.options))
+	}
+}
+
+export function mockDbWithIndex(entries=[]) {
+	return upgradeDb => {
+		const ponies = upgradeDb.createObjectStore('ponies', { autoIncrement: true })
+		ponies.createIndex('name', 'name', { unique: true })
+		ponies.createIndex('type', 'type', { unique: false })
+		entries.forEach(e => ponies.put(e))
 	}
 }
