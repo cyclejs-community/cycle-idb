@@ -21,7 +21,7 @@ export function mockDatabase(entries=[], stores=[]) {
 
 export function mockDbWithIndex(entries=[]) {
 	return upgradeDb => {
-		const ponies = upgradeDb.createObjectStore('ponies', { autoIncrement: true })
+		const ponies = upgradeDb.createObjectStore('ponies', { keyPath: 'id', autoIncrement: true })
 		ponies.createIndex('name', 'name', { unique: true })
 		ponies.createIndex('type', 'type', { unique: false })
 		entries.forEach(e => ponies.put(e))

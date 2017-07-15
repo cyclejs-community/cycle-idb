@@ -29,7 +29,7 @@ export default function Store(dbPromise, result$$, name) {
 			return selector
 		},
 		index: indexName => {
-			const hash = 'index#' + name
+			const hash = 'index#' + indexName
 			const selector = cache[hash] || IndexSelector(dbPromise, result$$, name, indexName)
 			cache[hash] = selector
 			return selector

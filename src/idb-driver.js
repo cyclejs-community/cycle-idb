@@ -14,21 +14,7 @@ export default function makeIdbDriver(name, version, upgrade) {
 	const dbOperations = {
 		$put: WriteOperation(dbPromise, 'put'),
 		$delete: WriteOperation(dbPromise, 'delete'),
-		$update: async (store, data) => {
-			const db = await dbPromise
-			const tx = db.transaction(store, 'readwrite')
-			const storeObj = tx.objectStore(store)
-			const oldValue = await storeObj.get(data[storeObj.keyPath])
-			const modifiedIndexes = updatedIndexes(storeObj, oldValue, data)
-			const [ result, _ ] = await Promise.all([
-				storeObj.put({...oldValue, ...data}),
-				tx.complete
-			])
-			return {
-				key: result,
-				indexes: modifiedIndexes
-			}
-		},
+		$update: WriteOperation(dbPromise, 'put', true),
 	}
 
 	return function idbDriver(write$) {
@@ -66,26 +52,34 @@ function updatedIndexes(storeObj, old, data) {
 		})
 		.reduce((acc, { index, oldValue, newValue }) => {
 			const entry = acc[index] || []
-			[oldValue, newValue].forEach(v => {
-				if (!v in entry) entry.push(v)
-			})
+			if (oldValue && entry.indexOf(oldValue) === -1) {
+				entry.push(oldValue)
+			}
+			if (newValue && entry.indexOf(newValue) === -1) {
+				entry.push(newValue)
+			}
 			acc[index] = entry
 			return acc
 		}, {})
 }
 
-const WriteOperation = (dbPromise, operation) => async (store, data) => {
+const WriteOperation = (dbPromise, operation, merge=false) => async (store, data) => {
 	const db = await dbPromise
 	const tx = db.transaction(store, 'readwrite')
 	const storeObj = tx.objectStore(store)
 
 	const key = operation === 'delete' ? data : data[storeObj.keyPath]
-	const old = await storeObj.get(key)
+	let old = {}
+	if (key) {
+		old = await storeObj.get(key)
+	}
+	//const old = await storeObj.get(key)
 
 	const modifiedIndexes = updatedIndexes(storeObj, old, data)
-	console.log('Modified', modifiedIndexes)
+	const updatedData = merge ? {...old, ...data} : data
+
 	const [ result, _ ] = await Promise.all([
-		storeObj[operation](data),
+		storeObj[operation](updatedData),
 		tx.complete
 	])
 	return {
@@ -125,6 +119,7 @@ function createResult$$(dbPromise, dbOperations, write$) {
 	return write$
 		.map(({ operation, store, data }) => ({ dbOperation: dbOperations[operation], operation, store, data }))
 		.map(executeDbUpdate)
+		.remember()
 }
 
 function createError$(result$$) {

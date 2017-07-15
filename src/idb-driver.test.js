@@ -408,9 +408,9 @@ test('index(...).getAll() should get all the elements sorted by index', t => {
 	]))(xs.never())
 	driver.store('ponies').index('name').getAll().addListener({
 		next: value => t.deepEqual(value, [
-			{ name: 'Applejack', type: 'earth pony' },
-			{ name: 'Rarity', type: 'unicorn' },
-			{ name: 'Twilight Sparkle', type: 'unicorn' },
+			{ id: 3, name: 'Applejack', type: 'earth pony' },
+			{ id: 2, name: 'Rarity', type: 'unicorn' },
+			{ id: 1, name: 'Twilight Sparkle', type: 'unicorn' },
 		])
 	})
 })
@@ -425,8 +425,8 @@ test('index(...).getAll(key) should get all the elements with the given key', t 
 	]))(xs.never())
 	driver.store('ponies').index('type').getAll('unicorn').addListener({
 		next: value => t.deepEqual(value, [
-			{ name: 'Twilight Sparkle', type: 'unicorn' },
-			{ name: 'Rarity', type: 'unicorn' },
+			{ id: 1, name: 'Twilight Sparkle', type: 'unicorn' },
+			{ id: 2, name: 'Rarity', type: 'unicorn' },
 		])
 	})
 })
@@ -446,17 +446,34 @@ test('IdbDriver.$put should fail when inserting duplicated value for unique inde
 	})
 })
 
-test('index(...).getAll() should get updates when element is modified', t => {
+test('index(...).getAll() should get updates when element is inserted', t => {
 	t.plan(2)
 
 	const driver = makeIdbDriver(getTestId(), 1, mockDbWithIndex())(xs.of(
 		$put('ponies', { name: 'Applejack', type: 'earth pony' })
 	))
 
-	driver.store('ponies').index('name').getAll().addListener(sequenceListener(t)([
-		value => t.deepEqual(value, []),
-		value => t.deepEqual(value, [{ name: 'Applejack', type: 'earth pony' }]),
-	]))
+	driver.store('ponies').index('name').getAll()
+		.addListener(sequenceListener(t)([
+			value => t.deepEqual(value, []),
+			value => t.deepEqual(value, [{ id: 1, name: 'Applejack', type: 'earth pony' }]),
+		]))
+})
+
+test('index(...).getAll() should get updates when element is modified', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithIndex([
+		{ name: 'Applejack', type: 'earth pony' }
+	]))(xs.of(
+		$put('ponies', { id: 1, name: 'Applejack', type: 'earth pony', element: 'honesty' })
+	))
+
+	driver.store('ponies').index('name').getAll()
+		.addListener(sequenceListener(t)([
+			value => t.deepEqual(value, [{ id: 1, name: 'Applejack', type: 'earth pony' }]),
+			value => t.deepEqual(value, [{ id: 1, name: 'Applejack', type: 'earth pony', element: 'honesty' }]),
+		], e => t.fail(JSON.stringify(e))))
 })
 
 test('index(...).getAll(key) should get updates when element with key is inserted', t => {
@@ -468,7 +485,7 @@ test('index(...).getAll(key) should get updates when element with key is inserte
 
 	driver.store('ponies').index('type').getAll('unicorn').addListener(sequenceListener(t)([
 		value => t.deepEqual(value, []),
-		value => t.deepEqual(value, [{ name: 'Twilight Sparkle', type: 'unicorn' }])
+		value => t.deepEqual(value, [{ id: 1, name: 'Twilight Sparkle', type: 'unicorn' }])
 	]))
 })
 
@@ -478,16 +495,30 @@ test('index(...).getAll(key) should get updates when element with key is modifie
 	const driver = makeIdbDriver(getTestId(), 1, mockDbWithIndex([
 		{ name: 'Twilight Sparkle', type: 'unicorn' },
 	]))(xs.of(
-		$put('ponies', { name: 'Twilight Sparkle', type: 'unicorn', element: 'magic' })
+		$put('ponies', { id: 1, name: 'Twilight Sparkle', type: 'unicorn', element: 'magic' })
 	))
 
-	driver.store('ponies').index('type').getAll('unicorn').addListener(sequenceListener(t)([
-		value => t.deepEqual(value, [{ name: 'Twilight Sparkle', type: 'unicorn' }]),
-		value => t.deepEqual(value, [{ name: 'Twilight Sparkle', type: 'unicorn', element: 'magic' }])
-	]))
+	driver.store('ponies').index('type').getAll('unicorn')
+		.addListener(sequenceListener(t)([
+			value => t.deepEqual(value, [{ id: 1, name: 'Twilight Sparkle', type: 'unicorn' }]),
+			value => t.deepEqual(value, [{ id: 1, name: 'Twilight Sparkle', type: 'unicorn', element: 'magic' }])
+		], e => t.fail(JSON.stringify(e))))
 })
 
 test('index(...).getAll(key) should not get updates when element with different key is modified', t => {
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithIndex([
+		{ name: 'Fluttershy', type: 'pegasus' },
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+	]))(xs.of(
+		$update('ponies', { id: 1, name: 'Fluttershy', element: 'kindness' })
+	))
+
+	driver.store('ponies').index('type').getAll('unicorn')
+		.addListener(sequenceListener(t)([
+			value => t.deepEqual(value, [{ id: 2, name: 'Twilight Sparkle', type: 'unicorn'}]),
+			value => t.fail(`Unexpected value: ${JSON.stringify(value)}`)
+		]))
 	t.end()
 })
 
@@ -507,7 +538,7 @@ test.skip('The read event fired after a DB update event should contain only the 
 	]))
 })
 
-const sequenceListener = test => (listeners, bounded=true) => {
+const sequenceListener = test => (listeners, error=(e)=>{t.fail(JSON.stringify(e))}, bounded=true) => {
 	let current = 0
 	return {
 		next: value => {
@@ -517,7 +548,8 @@ const sequenceListener = test => (listeners, bounded=true) => {
 			}
 			listeners[current](value)
 			current++
-		}
+		},
+		error,
 	}
 }
 
