@@ -2,10 +2,10 @@
   "name": "cycle-idb",
   "version": "0.0.4",
   "description": "A cycle driver for IndexedDB.",
-  "main": "lib/index.js",
+  "main": "lib/idb-driver.js",
   "scripts": {
     "prelib": "rm -rf lib/*",
-    "lib": "babel src/idb-driver.js --out-file lib/index.js",
+    "lib": "babel src --out-dir lib --ignore test.js,mock.js",
     "test": "NODE_PATH=src tape -r babel-register 'src/**/*.test.js' | ./node_modules/.bin/tap-diff",
     "prepare": "npm test && npm run lib"
   },
