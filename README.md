@@ -167,18 +167,18 @@ These listeners will also catch the errors raised by writing operations that aff
 ## Planned features
 
 - [ ] Store selectors
-  - [x] get
-  - [x] getAll
-  - [x] count
+  - [x] ~~get~~
+  - [x] ~~getAll~~
+  - [x] ~~count~~
   - [ ] getAllKeys
 - [ ] Update operations
-  - [x] put
-  - [x] delete
-  - [x] update
+  - [x] ~~put~~
+  - [x] ~~delete~~
+  - [x] ~~update~~
   - [ ] add
   - [ ] clear
 - [ ] Index selectors
-  - [x] getAll
+  - [x] ~~getAll~~
   - [ ] get
   - [ ] getKey
   - [ ] getAllKeys
