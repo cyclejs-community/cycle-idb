@@ -45,6 +45,7 @@ function IndexSelector(dbPromise, result$$, storeName, indexName) {
 			const hash = 'getAll#' + key
 			const selector = cache[hash] || adapt(xs.createWithMemory({
 				start: listener => flattenConcurrently(result$$.filter($ => $._store === storeName))
+					.filter(({ result }) => !key || result.indexes[indexName].indexOf(key) !== -1)
 					.startWith(storeName)
 					.addListener({
 						next: async value => {
