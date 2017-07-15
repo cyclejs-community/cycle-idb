@@ -48,8 +48,13 @@ export function $update(store, data) {
 
 const WriteOperation = (dbPromise, operation) => async (store, data) => {
 	const db = await dbPromise
-	return await db.transaction(store, 'readwrite')
-		.objectStore(store)[operation](data)
+	const tx = db.transaction(store, 'readwrite')
+
+	const [ result, _ ] = await Promise.all([
+		tx.objectStore(store)[operation](data),
+		tx.complete
+	])
+	return result
 }
 
 function executeDbUpdate({ dbOperation, operation, store, data }) {
