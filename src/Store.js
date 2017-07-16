@@ -29,6 +29,12 @@ function IndexSelector(dbPromise, result$, storeName, indexName) {
 			const filteredResult$ = result$.filter(({ result }) => !key || result.indexes[indexName].indexOf(key) !== -1)
 			const options = { dbPromise, storeName, indexName, key, operation: 'get' }
 			return DbSelector(filteredResult$, ReadDbIndexListener, options)
+		}),
+		count: MultiKeyCache(key => {
+			const filteredResult$ = result$.filter(({ result }) => !key || result.indexes[indexName].indexOf(key) !== -1)
+			const options = { dbPromise, storeName, indexName, key, operation: 'count' }
+			return DbSelector(filteredResult$, ReadDbIndexListener, options)
+				.compose(dropRepeats())
 		})
 	}
 }

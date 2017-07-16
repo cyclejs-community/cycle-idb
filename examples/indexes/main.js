@@ -26,26 +26,38 @@ function main(sources) {
 		.map(ponies => ul(
 			ponies.map(pony => li(pony.name))
 		))
+	const unicornCount$ = ponyTypeIndex.count('unicorn')
+
 	const pegasusVtree$ = ponyTypeIndex.getAll('pegasus')
 		.startWith([])
 		.map(ponies => ul(
 			ponies.map(pony => li(pony.name))
 		))
-	const earthPoniesVtree$ = ponyTypeIndex.getAll('earth pony')
+	const pegasusCount$ = ponyTypeIndex.count('pegasus')
+
+	const earthPonyVtree$ = ponyTypeIndex.getAll('earth pony')
 		.startWith([])
 		.map(ponies => ul(
 			ponies.map(pony => li(pony.name))
 		))
+	const earthPonyCount$ = ponyTypeIndex.count('earth pony')
+
+	const ponies$ = xs.combine(unicornVtree$, pegasusVtree$, earthPonyVtree$)
+	const count$ = xs.combine(unicornCount$, pegasusCount$, earthPonyCount$)
 	
-	const vtree$ = xs.combine(unicornVtree$, pegasusVtree$, earthPoniesVtree$)
-		.map(([ unicorns, pegasi, earthPonies ]) => div([
-			h4('Unicorns'),
-			unicorns,
-			h4('Pegasi'),
-			pegasi,
-			h4('Earth Ponies'),
-			earthPonies,
-		]))
+	const vtree$ = xs.combine(ponies$, count$)
+		.map(([ ponies, count ]) => {
+			const [ unicorns, pegasi, earthPonies ] = ponies
+			const [ unicornCount, pegasusCount, earthPonyCount ] = count
+			return div([
+				h4(`Unicorns (${unicornCount})`),
+				unicorns,
+				h4(`Pegasi (${pegasusCount})`),
+				pegasi,
+				h4(`Earth Ponies (${earthPonyCount})`),
+				earthPonies,
+			])
+		})
 	
 	return {
 		IDB: addPonies$,

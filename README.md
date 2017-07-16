@@ -179,8 +179,8 @@ These listeners will also catch the errors raised by writing operations that aff
   - [ ] clear
 - [ ] Index selectors
   - [x] ~~getAll~~
-  - [ ] get
+  - [x] ~~get~~
   - [ ] getKey
   - [ ] getAllKeys
-  - [ ] count
+  - [x] ~~count~~
 - [ ] Support for cursors

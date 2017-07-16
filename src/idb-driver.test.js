@@ -740,6 +740,199 @@ test('index(...).get(key) should not get updates when an element with different 
 		]))
 })
 
+test('index(...).count() should count all the items with the specified index', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithTypeIndex([
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+		{ name: 'Applejack', type: 'earth pony' },
+		{ name: 'Spike' },
+	]))(xs.never())
+	driver.store('ponies').index('type').count()
+		.addListener({
+			next: value => t.equal(value, 2, 'Twilight and Applejack are counted, Spike is not')
+		})
+})
+
+test('index(...).count() should update when item with the specified index is added', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithTypeIndex([
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+		{ name: 'Applejack', type: 'earth pony' },
+		{ name: 'Spike' },
+	]))(xs.of(
+		$put('ponies', { name: 'Rarity', type: 'unicorn' }),
+	))
+	driver.store('ponies').index('type').count()
+		.addListener(sequenceListener(t)([
+			value => t.equal(value, 2, 'Twilight and Applejack are counted'),
+			value => t.equal(value, 3, 'Twilight, Applejack and Rarity are counted'),
+		]))
+})
+
+test('index(...).count() should update when item with the specified index is deleted', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithTypeIndex([
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+		{ name: 'Applejack', type: 'earth pony' },
+		{ name: 'Spike' },
+	]))(xs.of(
+		$delete('ponies', 'Twilight Sparkle')
+	))
+	driver.store('ponies').index('type').count()
+		.addListener(sequenceListener(t)([
+			value => t.equal(value, 2, 'Twilight and Applejack are counted'),
+			value => t.equal(value, 1, 'Only Applejack is counted'),
+		]))
+})
+
+test('index(...).count() should not update when item with the specified index is modified', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithTypeIndex([
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+		{ name: 'Applejack', type: 'earth pony' },
+		{ name: 'Spike' },
+	]))(xs.of(
+		$update('ponies', { name: 'Twilight Sparkle', type: 'alicorn' })
+	))
+	driver.store('ponies').index('type').count()
+		.addListener(sequenceListener(t)([
+			value => t.equal(value, 2, 'Only Twilight and Applejack are counted'),
+			value => t.fail(`Unexpected count: ${value}`),
+		]))
+})
+
+test('index(...).count() should not update when item without the specified index is added', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithTypeIndex([
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+		{ name: 'Applejack', type: 'earth pony' },
+		{ name: 'Spike' },
+	]))(xs.of(
+		$put('ponies', { name: 'Gilda' })
+	))
+	driver.store('ponies').index('type').count()
+		.addListener(sequenceListener(t)([
+			value => t.equal(value, 2, 'Only Twilight and Applejack are counted'),
+			value => t.fail(`Unexpected count: ${value}`)
+		], e => t.fail(e)))
+})
+
+test('index(...).count() should not update when item without the specified index is deleted', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithTypeIndex([
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+		{ name: 'Applejack', type: 'earth pony' },
+		{ name: 'Spike' },
+	]))(xs.of(
+		$delete('ponies', 'Spike')
+	))
+	driver.store('ponies').index('type').count()
+		.addListener(sequenceListener(t)([
+			value => t.equal(value, 2, 'Only Twilight and Applejack are counted'),
+			value => t.fail(`Unexpected count: ${value}`),
+		]))
+})
+
+test('index(...).count(key) should count all the items with the specified key', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithTypeIndex([
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+		{ name: 'Applejack', type: 'earth pony' },
+		{ name: 'Spike' },
+	]))(xs.never())
+	driver.store('ponies').index('type').count('unicorn')
+		.addListener({
+			next: value => t.equal(value, 1, 'Twilight is counted, Applejack and Spike are not')
+		})
+})
+
+test('index(...).count(key) should update when an item with the specified key is added', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithTypeIndex([
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+		{ name: 'Applejack', type: 'earth pony' },
+	]))(xs.of(
+		$put('ponies', { name: 'Rarity', type: 'unicorn' })
+	))
+	driver.store('ponies').index('type').count('unicorn')
+		.addListener(sequenceListener(t)([
+			value => t.equal(value, 1, 'Only Twilight is counted'),
+			value => t.equal(value, 2, 'Twilight and Rarity are counted'),
+		]))
+})
+
+test('index(...).count(key) should update when an item with the specified key is deleted', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithTypeIndex([
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+		{ name: 'Rarity', type: 'unicorn' },
+	]))(xs.of(
+		$delete('ponies', 'Rarity')
+	))
+	driver.store('ponies').index('type').count('unicorn')
+		.addListener(sequenceListener(t)([
+			value => t.equal(value, 2, 'Twilight and Rarity are unicorns'),
+			value => t.equal(value, 1, 'Rarity is gone :('),
+		]))
+})
+
+test('index(...).count(key) should not update when an item with the specified key is modified', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithTypeIndex([
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+		{ name: 'Rarity', type: 'unicorn' },
+	]))(xs.of(
+		$update('ponies', { name: 'Twilight Sparkle', element: 'magic' })
+	))
+	driver.store('ponies').index('type').count('unicorn')
+		.addListener(sequenceListener(t)([
+			value => t.equal(value, 2, 'Twilight and Rarity are counted'),
+			value => t.fail(`Unexpected count: ${value}`)
+		]))
+})
+
+test('index(...).count(key) should update when an item with a different key is updated with the specified key', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithTypeIndex([
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+		{ name: 'Rarity' },
+	]))(xs.of(
+		$update('ponies', { name: 'Rarity', type: 'unicorn' })
+	))
+	driver.store('ponies').index('type').count('unicorn')
+		.addListener(sequenceListener(t)([
+			value => t.equal(value, 1, 'Only Twilight is counted'),
+			value => t.equal(value, 2, 'Twilight and Rarity are counted'),
+		]))
+})
+
+test('index(...).count(key) should update when an item with the specified key is updated to a different key', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithTypeIndex([
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+		{ name: 'Rarity', type: 'unicorn' },
+	]))(xs.of(
+		$update('ponies', { name: 'Twilight Sparkle', type: 'alicorn' })
+	))
+	driver.store('ponies').index('type').count('unicorn')
+		.addListener(sequenceListener(t)([
+			value => t.equal(value, 2, 'Twilight and Rarity are counted'),
+			value => t.equal(value, 1, 'Only Rarity is counted because Twilight is an alicorn'),
+		]))
+})
+
 test('Calling index(...) multiple times should return the same object', t => {
 	t.plan(1)
 
