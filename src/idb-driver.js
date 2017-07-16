@@ -38,7 +38,7 @@ export function $delete(store, key) {
 }
 
 export function $update(store, data) {
-	return { store, data: data, operation: '$update' }
+	return { store, data, operation: '$update' }
 }
 
 function updatedIndexes(storeObj, old, data) {
@@ -120,7 +120,6 @@ function createResult$$(dbPromise, dbOperations, write$) {
 	return write$
 		.map(({ operation, store, data }) => ({ dbOperation: dbOperations[operation], operation, store, data }))
 		.map(executeDbUpdate)
-		.remember()
 }
 
 function createError$(result$$) {
