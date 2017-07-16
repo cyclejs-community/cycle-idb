@@ -143,7 +143,7 @@ The cycle-idb driver exposes an `error$` stream that broadcasts all errors that 
 function main(sources) {
     sources.IDB.error$
         .addListener({
-            error: e => console.log(`Operation ${e.query.operation}(${e.query.data}) on store ${e.store} failed.`)
+            error: e => console.log(`Operation ${e.query.operation}(${e.query.data}) on store ${e.query.store} failed.`)
         })
 }
 ```

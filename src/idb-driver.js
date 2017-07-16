@@ -100,10 +100,11 @@ function executeDbUpdate({ dbOperation, operation, store, data }) {
 					})
 					listener.complete()
 				})
-				.catch(error => listener.error({
-					error,
-					query: { store, data, operation },
-				}))
+				.catch(error => {
+					error = error || new Error(error) // Why does idb throw null errors?
+					error.query = { store, data, operation }
+					listener.error(error)
+				})
 		},
 		stop: () => {},
 	})
