@@ -1,6 +1,6 @@
 {
   "name": "cycle-idb",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "A cycle driver for IndexedDB.",
   "main": "lib/idb-driver.js",
   "scripts": {
