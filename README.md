@@ -122,12 +122,21 @@ const ponyTypeIndex = sources.IDB.store('ponies').index('type')
 ```
 
 The index selector returns an object with the following methods:
-- `getAll`: returns a stream subscribed to all items in the store, sorted by the selected index. This method accepts an optional `key` argument. If provided, it will only subscribe to the items where the index property equals the provided key.
+- `getAll`: returns a stream subscribed to all items in the store that contain the selected index, sorted by the selected index. This method accepts an optional `key` argument. If provided, it will only subscribe to the items where the index property matches the provided key.
+- `get`: returns a stream subscribed to the first item found matching the `key`argument. This selector works better when the selected index is unique.
+- `count`: returns a stream subscribed the count of all items in the store that contain the selected index. This method accepts an optional argument `key` argument. If provided, it will only subscribe to the count of the items where the index property matches the provided key.
+
+You can check the [IDBIndex](https://developer.mozilla.org/en-US/docs/Web/API/IDBIndex) documentation for more details.
 
 ```javascript
 const ponyTypeIndex = sources.IDB.store('ponies').index('type')
 const poniesByType = ponyTypeIndex.getAll() // This returns a stream subscribed to all ponies, sorted by 'type'
 const unicorns = ponyTypeIndex.getAll('unicorn') // This returns a stream subscribed only to the ponies of type 'unicorn'
+
+const ponyNameIndex = sources.IDB.store('ponies').index('name')
+const twilight = ponyNameIndex.get('Twilight Sparkle') // This returns a stream subscribed to the pony 'Twilight Sparkle'
+
+const unicornCount = ponyTypeIndex.count('unicorn') // This returns a stream subscribed to the count of unicorns
 ```
 
 ### Error handling
