@@ -10,7 +10,7 @@
   "dependencies": {
     "@cycle/dom": "^17.6.0",
     "@cycle/run": "^3.1.0",
-    "cycle-idb": ">=0.0.5",
+    "cycle-idb": ">=0.0.6",
     "xstream": "^10.8.0"
   },
   "devDependencies": {
