@@ -35,3 +35,11 @@ export function mockDbWithTypeIndex(entries=[]) {
 		entries.forEach(e => ponies.put(e))
 	}
 }
+
+export function mockDbWithNameIndex(entries=[]) {
+	return upgradeDb => {
+		const ponies = upgradeDb.createObjectStore('ponies', { autoIncrement: true })
+		ponies.createIndex('name', 'name', { unique: true })
+		entries.forEach(e => ponies.put(e))
+	}
+}

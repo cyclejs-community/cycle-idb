@@ -6,6 +6,7 @@ import { adapt } from '@cycle/run/lib/adapt'
 import idb from 'idb'
 
 import Store from './Store'
+import { MultiKeyCache } from './cache'
 
 
 export default function makeIdbDriver(name, version, upgrade) {
@@ -23,7 +24,7 @@ export default function makeIdbDriver(name, version, upgrade) {
 
 		return {
 			error$,
-			store: name => Store(dbPromise, result$$, name),
+			store: MultiKeyCache(name => Store(dbPromise, result$$, name)),
 		}
 	}
 }
@@ -37,7 +38,7 @@ export function $delete(store, key) {
 }
 
 export function $update(store, data) {
-	return { store, data: data, operation: '$update' }
+	return { store, data, operation: '$update' }
 }
 
 function updatedIndexes(storeObj, old, data) {
@@ -119,7 +120,6 @@ function createResult$$(dbPromise, dbOperations, write$) {
 	return write$
 		.map(({ operation, store, data }) => ({ dbOperation: dbOperations[operation], operation, store, data }))
 		.map(executeDbUpdate)
-		.remember()
 }
 
 function createError$(result$$) {

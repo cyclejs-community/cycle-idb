@@ -9,6 +9,7 @@ import {
 	mockDatabase,
 	mockDbWithIndex,
 	mockDbWithTypeIndex,
+	mockDbWithNameIndex,
 } from './idb-driver.mock'
 import idb from 'idb'
 
@@ -618,6 +619,146 @@ test('index(...).getAll(key) should not get updates when an element with differe
 			value => t.deepEqual(value, [{ id: 1, name: 'Rainbow Dash', type: 'pegasus' }]),
 			value => t.fail(`Unexpected value: ${JSON.stringify(value)}`)
 		]))
+})
+
+test('index(...).get(key) should get updates when element with key is inserted', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithTypeIndex())(xs.of(
+		$put('ponies', { name: 'Twilight Sparkle', type: 'unicorn' })
+	))
+
+	driver.store('ponies').index('type').get('unicorn').addListener(sequenceListener(t)([
+		value => t.deepEqual(value, undefined),
+		value => t.deepEqual(value, { name: 'Twilight Sparkle', type: 'unicorn' })
+	]))
+})
+
+test('index(...).get(key) should get updates when element with key is modified', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithTypeIndex([
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+	]))(xs.of(
+		$put('ponies', { name: 'Twilight Sparkle', type: 'unicorn', element: 'magic' })
+	))
+	driver.store('ponies').index('type').get('unicorn')
+		.addListener(sequenceListener(t)([
+			value => t.deepEqual(value, { name: 'Twilight Sparkle', type: 'unicorn' }),
+			value => t.deepEqual(value, { name: 'Twilight Sparkle', type: 'unicorn', element: 'magic' })
+		], e => t.fail(JSON.stringify(e))))
+})
+
+test('index(...).get(key) should get updates when element with key is deleted', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithNameIndex([
+		{ name: 'Twilight Sparkle', type: 'unicorn'},
+		{ name: 'Rarity', type: 'unicorn'},
+	]))(xs.of(
+		$delete('ponies', 1)
+	))
+	driver.store('ponies').index('name').get('Twilight Sparkle')
+		.addListener(sequenceListener(t)([
+			value => t.deepEqual(value, { name: 'Twilight Sparkle', type: 'unicorn' }),
+			value => t.deepEqual(value, undefined)
+		]))
+})
+
+test('index(...).get(key) should get updates when element with key is updated with a different key', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithIndex([
+		{ name: 'Twilight Sparkle', type: 'unicorn'},
+	]))(xs.of(
+		$update('ponies', { id: 1, type: 'alicorn' }),
+	))
+	driver.store('ponies').index('type').get('unicorn')
+		.addListener(sequenceListener(t)([
+			value => t.deepEqual(value, { id: 1, name: 'Twilight Sparkle', type: 'unicorn' }),
+			value => t.deepEqual(value, undefined)
+		]))
+})
+
+test('index(...).get(key) should get updated when element with different key is updated with key', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithTypeIndex([
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+	]))(xs.of(
+		$update('ponies', { name: 'Twilight Sparkle', type: 'alicorn' })
+	))
+	driver.store('ponies').index('type').get('alicorn')
+		.addListener(sequenceListener(t)([
+			value => t.deepEqual(value, undefined),
+			value => t.deepEqual(value, { name: 'Twilight Sparkle', type: 'alicorn' })
+		]))
+})
+
+test('index(...).get(key) should not get updates when element with different key is modified', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithIndex([
+		{ name: 'Fluttershy', type: 'pegasus' },
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+	]))(xs.of(
+		$update('ponies', { id: 1, name: 'Fluttershy', element: 'kindness' })
+	))
+	driver.store('ponies').index('type').get('unicorn')
+		.addListener(sequenceListener(t)([
+			value => t.deepEqual(value, { id: 2, name: 'Twilight Sparkle', type: 'unicorn'}),
+			value => t.fail(`Unexpected value: ${JSON.stringify(value)}`)
+		]))
+})
+
+test('index(...).get(key) should not get updates when element with different key is inserted', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithIndex())(xs.of(
+		$put('ponies', { name: 'Pinkie Pie', type: 'earth pony' }),
+	))
+	driver.store('ponies').index('type').get('unicorn')
+		.addListener(sequenceListener(t)([
+			value => t.deepEqual(value, undefined),
+			value => t.fail(`Unexpected value: ${JSON.stringify(value)}`)
+		]))
+})
+
+test('index(...).get(key) should not get updates when an element with different key is deleted', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithIndex([
+		{ name: 'Rainbow Dash', type: 'pegasus'},
+		{ name: 'Pinkie Pie', type: 'earth pony'},
+	]))(xs.of(
+		$delete('ponies', 2),
+	))
+	driver.store('ponies').index('type').get('pegasus')
+		.addListener(sequenceListener(t)([
+			value => t.deepEqual(value, { id: 1, name: 'Rainbow Dash', type: 'pegasus' }),
+			value => t.fail(`Unexpected value: ${JSON.stringify(value)}`)
+		]))
+})
+
+test('Calling index(...) multiple times should return the same object', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithIndex())(xs.never())
+	const ponyStore = driver.store('ponies')
+	const index_1 = ponyStore.index('type')
+	const index_2 = ponyStore.index('type')
+
+	t.equal(index_1, index_2)
+})
+
+test('Calling store(...) multiple times with the same name should return the same object', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase())(xs.never())
+	const store_1 = driver.store('ponies')
+	const store_2 = driver.store('ponies')
+
+	t.equal(store_1, store_2)
 })
 
 test.skip('The read event fired after a DB update event should contain only the data updated by that event', t => {
