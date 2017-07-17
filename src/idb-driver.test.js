@@ -996,6 +996,171 @@ test('index(...).count(key) should update when an item with the specified key is
 		]))
 })
 
+test('index(...).getAllKeys() should return all keys in the index', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithTypeIndex([
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+		{ name: 'Applejack', type: 'earth pony' },
+		{ name: 'Spike' },
+	]))(xs.never())
+	driver.store('ponies').index('type').getAllKeys()
+		.addListener(sequenceListener(t)([
+			value => t.deepEqual(value, [ 'Applejack', 'Twilight Sparkle' ], 'Applejack and Twilight are counted, but not Spike'),
+			value => t.fail(`Unexpected value: ${JSON.stringify(value)}`),
+		]))
+})
+
+test('index(...).getAllKeys() should update when an object with the key is added', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithTypeIndex([
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+		{ name: 'Applejack', type: 'earth pony' },
+		{ name: 'Spike' },
+	]))(xs.of(
+		$put('ponies', { name: 'Pinkie Pie', type: 'earth pony' })
+	))
+	driver.store('ponies').index('type').getAllKeys()
+		.addListener(sequenceListener(t)([
+			value => t.deepEqual(value, [ 'Applejack', 'Twilight Sparkle' ], 'Applejack and Twilight are counted, but not Spike'),
+			value => t.deepEqual(value, [ 'Applejack', 'Pinkie Pie', 'Twilight Sparkle' ], 'Pinkie is added'),
+		]))
+})
+
+test('index(...).getAllKeys() should update when an object with the key is deleted', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithTypeIndex([
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+		{ name: 'Applejack', type: 'earth pony' },
+		{ name: 'Spike' },
+	]))(xs.of(
+		$delete('ponies', 'Applejack')
+	))
+	driver.store('ponies').index('type').getAllKeys()
+		.addListener(sequenceListener(t)([
+			value => t.deepEqual(value, [ 'Applejack', 'Twilight Sparkle' ], 'Applejack and Twilight are counted, but not Spike'),
+			value => t.deepEqual(value, [ 'Twilight Sparkle' ], 'Applejack is removed :('),
+		]))
+})
+
+test('index(...).getAllKeys() should not update when an object with the key is modified', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithTypeIndex([
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+		{ name: 'Applejack', type: 'earth pony' },
+		{ name: 'Spike' },
+	]))(xs.of(
+		$put('ponies', { name: 'Twilight Sparkle', type: 'alicorn' })
+	))
+	driver.store('ponies').index('type').getAllKeys()
+		.addListener(sequenceListener(t)([
+			value => t.deepEqual(value, [ 'Applejack', 'Twilight Sparkle' ], 'Applejack and Twilight are counted, but not Spike'),
+			value => t.fail(`Unexpected value: ${JSON.stringify(value)}`),
+		]))
+})
+
+test('index(...).getAllKeys() should not update when an object without the key is added', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithTypeIndex([
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+		{ name: 'Applejack', type: 'earth pony' },
+		{ name: 'Spike' },
+	]))(xs.of(
+		$put('ponies', { name: 'Gilda' })
+	))
+	driver.store('ponies').index('type').getAllKeys()
+		.addListener(sequenceListener(t)([
+			value => t.deepEqual(value, [ 'Applejack', 'Twilight Sparkle' ], 'Applejack and Twilight are counted, but not Spike'),
+			value => t.fail(`Unexpected value: ${JSON.stringify(value)}`),
+		]))
+})
+
+test('index(...).getAllKeys() should not update when an object without the key is deleted', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithTypeIndex([
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+		{ name: 'Applejack', type: 'earth pony' },
+		{ name: 'Spike' },
+	]))(xs.of(
+		$delete('ponies', 'Spike')
+	))
+	driver.store('ponies').index('type').getAllKeys()
+		.addListener(sequenceListener(t)([
+			value => t.deepEqual(value, [ 'Applejack', 'Twilight Sparkle' ], 'Applejack and Twilight are counted, but not Spike'),
+			value => t.fail(`Unexpected value: ${JSON.stringify(value)}`),
+		]))
+})
+
+test('index(...).getAllKeys() should not update when an object without the key is modified', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithTypeIndex([
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+		{ name: 'Applejack', type: 'earth pony' },
+		{ name: 'Spike' },
+	]))(xs.of(
+		$put('ponies', { name: 'Spike', colour: 'purple' })
+	))
+	driver.store('ponies').index('type').getAllKeys()
+		.addListener(sequenceListener(t)([
+			value => t.deepEqual(value, [ 'Applejack', 'Twilight Sparkle' ], 'Applejack and Twilight are counted, but not Spike'),
+			value => t.fail(`Unexpected value: ${JSON.stringify(value)}`),
+		]))
+})
+
+test('index(...).getAllKeys() should update when an object without the key is updated with the key', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithTypeIndex([
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+		{ name: 'Applejack', type: 'earth pony' },
+		{ name: 'Rainbow Dash' },
+	]))(xs.of(
+		$put('ponies', { name: 'Rainbow Dash', type: 'pegasus' })
+	))
+	driver.store('ponies').index('type').getAllKeys()
+		.addListener(sequenceListener(t)([
+			value => t.deepEqual(value, [ 'Applejack', 'Twilight Sparkle' ], 'Applejack and Twilight are counted'),
+			value => t.deepEqual(value, [ 'Applejack', 'Rainbow Dash', 'Twilight Sparkle' ], 'Rainbow Dash is added'),
+		]))
+})
+
+test('index(...).getAllKeys() should update when an object with the key is updated without the key', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithTypeIndex([
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+		{ name: 'Applejack', type: 'earth pony' },
+		{ name: 'Spike' },
+	]))(xs.of(
+		$put('ponies', { name: 'Applejack' })
+	))
+	driver.store('ponies').index('type').getAllKeys()
+		.addListener(sequenceListener(t)([
+			value => t.deepEqual(value, [ 'Applejack', 'Twilight Sparkle' ], 'Applejack and Twilight are counted, but not Spike'),
+			value => t.deepEqual(value, [ 'Twilight Sparkle' ], 'Applejack is not counted anymore'),
+		]))
+})
+
+test('index(...).getAllKeys(key) should return all the keys for the index with the given value', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithTypeIndex([
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+		{ name: 'Rarity', type: 'unicorn' },
+		{ name: 'Rainbow Dash', type: 'pegasus' },
+	]))(xs.never())
+	driver.store('ponies').index('type').getAllKeys('unicorn')
+		.addListener(sequenceListener(t)([
+			value => t.deepEqual(value, [ 'Rarity', 'Twilight Sparkle' ], 'Twilight and Rarity are counted, but not Rainbow'),
+		]))
+})
+
 test('Calling index(...) multiple times should return the same object', t => {
 	t.plan(1)
 

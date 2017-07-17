@@ -49,17 +49,37 @@ function updatedIndexes(storeObj, old, data) {
 			return {
 				index,
 				oldValue: old[indexKeyPath],
-				newValue: data.hasOwnProperty(indexKeyPath) ? data[indexKeyPath] : old[indexKeyPath]
+				newValue: data.hasOwnProperty(indexKeyPath) ? data[indexKeyPath] : undefined
 			}
 		})
+		.filter(({ oldValue, newValue }) => oldValue || newValue)
 		.reduce((acc, { index, oldValue, newValue }) => {
-			const entry = acc[index] || []
-			if (oldValue && entry.indexOf(oldValue) === -1) {
-				entry.push(oldValue)
+			const entry = acc[index] || {
+				oldValue,
+				newValue,
 			}
-			if (newValue && entry.indexOf(newValue) === -1) {
-				entry.push(newValue)
+
+			/*
+			const entry = acc[index] || {
+				inserted: new Set(),
+				deleted: new Set(),
+				updated: new Set(),
+				all: new Set(),
 			}
+			if (oldValue) entry.all.add(oldValue)
+			if (newValue) entry.all.add(newValue)
+
+			if (oldValue && oldValue === newValue) {
+				entry.updated.add(oldValue)
+			}
+			if (oldValue && oldValue !== newValue) {
+				entry.deleted.add(oldValue)
+			}
+			if (newValue && newValue !== oldValue) {
+				entry.inserted.add(newValue)
+			}
+			*/
+			
 			acc[index] = entry
 			return acc
 		}, {})

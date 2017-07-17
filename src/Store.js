@@ -20,25 +20,37 @@ export default function Store(dbPromise, result$$, name) {
 }
 
 function IndexSelector(dbPromise, result$, storeName, indexName) {
+	const filterByKey = key => ({ result }) => (key === undefined || result.indexes[indexName].oldValue === key || result.indexes[indexName].newValue === key)
+
 	return {
 		getAll: MultiKeyCache(key => {
-			const filteredResult$ = result$.filter(({ result }) => !key || result.indexes[indexName].indexOf(key) !== -1)
+			const filteredResult$ = result$.filter(filterByKey(key))
 			const options = { dbPromise, storeName, indexName, key, operation: 'getAll' }
 			return DbSelector(filteredResult$, ReadDbIndexListener, options)
 		}),
 		get: MultiKeyCache(key => {
-			const filteredResult$ = result$.filter(({ result }) => !key || result.indexes[indexName].indexOf(key) !== -1)
+			const filteredResult$ = result$.filter(filterByKey(key))
 			const options = { dbPromise, storeName, indexName, key, operation: 'get' }
 			return DbSelector(filteredResult$, ReadDbIndexListener, options)
 		}),
 		count: MultiKeyCache(key => {
-			const filteredResult$ = result$.filter(({ result }) => !key || result.indexes[indexName].indexOf(key) !== -1)
+			const filteredResult$ = result$.filter(filterByKey(key))
 			const options = { dbPromise, storeName, indexName, key, operation: 'count' }
 			return DbSelector(filteredResult$, ReadDbIndexListener, options)
 				.compose(dropRepeats())
+		}),
+		getAllKeys: MultiKeyCache(key => {
+			const filteredResult$ = result$
+				.filter(({ result }) => result.indexes.hasOwnProperty(indexName))
+				.filter(({ result }) => key || xor(result.indexes[indexName].oldValue !== undefined, result.indexes[indexName].newValue !== undefined))
+				.filter(filterByKey(key))
+			const options = { dbPromise, storeName, indexName, key, operation: 'getAllKeys' }
+			return DbSelector(filteredResult$, ReadDbIndexListener, options)
 		})
 	}
 }
+
+const xor = (a, b) => (a || b) && !(a && b)
 
 function DbSelector(result$, Listener, options) {
 	return adapt(xs.createWithMemory({
@@ -48,6 +60,8 @@ function DbSelector(result$, Listener, options) {
 		stop: () => {},
 	}))
 }
+
+const resultIsInsertedOrDeleted = ({ result }) => result.operation === 'inserted' || result.operation === 'deleted'
 
 const GetSelector = (dbPromise, result$, storeName, key) => 
 	DbSelector(result$.filter(({ result }) => result.key === key), ReadDbListener, {
@@ -62,8 +76,7 @@ const CountSelector = (dbPromise, result$, storeName) =>
 		.compose(dropRepeats())
 
 const GetAllKeysSelector = (dbPromise, result$, storeName) => {
-	const filteredResult$ = result$
-		.filter(({ result }) => result.operation === 'inserted' || result.operation === 'deleted')
+	const filteredResult$ = result$.filter(resultIsInsertedOrDeleted)
 	return DbSelector(filteredResult$, ReadDbListener, { dbPromise, storeName, operation: 'getAllKeys' })
 }
 
