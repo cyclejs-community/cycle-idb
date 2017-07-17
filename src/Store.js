@@ -13,6 +13,7 @@ export default function Store(dbPromise, result$$, name) {
 	return {
 		get: MultiKeyCache(key => GetSelector(dbPromise, result$, name, key)),
 		getAll: SingleKeyCache(() => GetAllSelector(dbPromise, result$, name)),
+		getAllKeys: SingleKeyCache(() => GetAllKeysSelector(dbPromise, result$, name)),
 		count: SingleKeyCache(() => CountSelector(dbPromise, result$, name)),
 		index: MultiKeyCache(indexName => IndexSelector(dbPromise, result$, name, indexName)),
 	}
@@ -59,6 +60,12 @@ const GetAllSelector = (dbPromise, result$, storeName) =>
 const CountSelector = (dbPromise, result$, storeName) =>
 	DbSelector(result$, ReadDbListener, { dbPromise, storeName, operation: 'count'})
 		.compose(dropRepeats())
+
+const GetAllKeysSelector = (dbPromise, result$, storeName) => {
+	const filteredResult$ = result$
+		.filter(({ result }) => result.operation === 'inserted' || result.operation === 'deleted')
+	return DbSelector(filteredResult$, ReadDbListener, { dbPromise, storeName, operation: 'getAllKeys' })
+}
 
 function ReadDbListener(listener, { dbPromise, storeName, operation, key }) {
 	return {

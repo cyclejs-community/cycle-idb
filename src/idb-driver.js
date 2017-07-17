@@ -70,7 +70,8 @@ const WriteOperation = (dbPromise, operation, merge=false) => async (store, data
 	const tx = db.transaction(store, 'readwrite')
 	const storeObj = tx.objectStore(store)
 
-	const key = operation === 'delete' ? data : data[storeObj.keyPath]
+	const keyPath = storeObj.keyPath
+	const key = operation === 'delete' ? data : data[keyPath]
 	let old = {}
 	if (key) {
 		old = await storeObj.get(key)
@@ -86,7 +87,8 @@ const WriteOperation = (dbPromise, operation, merge=false) => async (store, data
 	])
 	return {
 		key: result || data, // $delete returns 'undefined', but then the key is in 'data'
-		indexes: modifiedIndexes
+		indexes: modifiedIndexes,
+		operation: operation === 'delete' ? 'deleted' : (old === undefined ? 'inserted' : 'modified'),
 	}
 }
 

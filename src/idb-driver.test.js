@@ -400,6 +400,69 @@ test('IdbDriver.count() should only broadcast when count changes', t => {
 	]))
 })
 
+test('IdbDriver.getAllKeys() should return all keys present in the store', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase([
+		{ name: 'Fluttershy', type: 'pegasus' },
+		{ name: 'Pinkie Pie', type: 'earth pony' },
+		{ name: 'Rarity', type: 'unicorn' },
+	]))(xs.never())
+	driver.store('ponies').getAllKeys()
+		.addListener({
+			next: value => t.deepEqual(value, [ 'Fluttershy', 'Pinkie Pie', 'Rarity' ])
+		})
+})
+
+test('IdbDriver.getAllKeys() should get updates when a new object is added to the store', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase([
+		{ name: 'Fluttershy', type: 'pegasus' },
+		{ name: 'Pinkie Pie', type: 'earth pony' },
+	]))(xs.of(
+		$put('ponies', { name: 'Rarity', type: 'unicorn' })
+	))
+	driver.store('ponies').getAllKeys()
+		.addListener(sequenceListener(t)([
+			value => t.deepEqual(value, [ 'Fluttershy', 'Pinkie Pie' ], 'Fluttershy and Pinkie are in the list'),
+			value => t.deepEqual(value, [ 'Fluttershy', 'Pinkie Pie', 'Rarity' ], 'Rarity is added')
+		]))
+})
+
+test('IdbDriver.getAllKeys() should get updates when an object is removed from the store', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase([
+		{ name: 'Fluttershy', type: 'pegasus' },
+		{ name: 'Pinkie Pie', type: 'earth pony' },
+	]))(xs.of(
+		$delete('ponies', 'Pinkie Pie')
+	))
+	driver.store('ponies').getAllKeys()
+		.addListener(sequenceListener(t)([
+			value => t.deepEqual(value, [ 'Fluttershy', 'Pinkie Pie' ], 'Fluttershy and Pinkie are in the list'),
+			value => t.deepEqual(value, [ 'Fluttershy' ], 'Pinkie is removed')
+		]))
+})
+
+test('IdbDriver.getAllKeys() should not get updates when an existing object is modified', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase([
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+		{ name: 'Pinkie Pie', type: 'earth pony' },
+		{ name: 'Rainbow Dash', type: 'pegasus' },
+	]))(xs.of(
+		$update('ponies', { name: 'Twilight Sparkle', type: 'alicorn' })
+	))
+	driver.store('ponies').getAllKeys()
+		.addListener(sequenceListener(t)([
+			value => t.deepEqual(value, [ 'Pinkie Pie', 'Rainbow Dash', 'Twilight Sparkle' ], 'Twilight, Rainbow and Pinkie are in the list'),
+			value => t.fail(`Unexpected value: ${JSON.stringify(value)}`),
+		]))
+})
+
 test('index(...).getAll() should get all the elements sorted by index', t => {
 	t.plan(1)
 
