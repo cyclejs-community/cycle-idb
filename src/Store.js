@@ -7,15 +7,15 @@ import { adapt } from '@cycle/run/lib/adapt'
 import { SingleKeyCache, MultiKeyCache } from './cache'
 
 
-export default function Store(dbPromise, result$$, name) {
-	const result$ = flattenConcurrently(result$$.filter($ => $._store === name))
+export default function Store(dbPromise, result$$, storeName) {
+	const result$ = flattenConcurrently(result$$.filter($ => $._store === storeName))
 
 	return {
-		get: MultiKeyCache(key => GetSelector(dbPromise, result$, name, key)),
-		getAll: SingleKeyCache(() => GetAllSelector(dbPromise, result$, name)),
-		getAllKeys: SingleKeyCache(() => GetAllKeysSelector(dbPromise, result$, name)),
-		count: SingleKeyCache(() => CountSelector(dbPromise, result$, name)),
-		index: MultiKeyCache(indexName => IndexSelector(dbPromise, result$, name, indexName)),
+		get: MultiKeyCache(key => GetSelector(dbPromise, result$, storeName, key)),
+		getAll: SingleKeyCache(() => GetAllSelector(dbPromise, result$, storeName)),
+		getAllKeys: SingleKeyCache(() => GetAllKeysSelector(dbPromise, result$, storeName)),
+		count: SingleKeyCache(() => CountSelector(dbPromise, result$, storeName)),
+		index: MultiKeyCache(indexName => IndexSelector(dbPromise, result$, storeName, indexName)),
 	}
 }
 
@@ -24,7 +24,7 @@ function IndexSelector(dbPromise, result$, storeName, indexName) {
 
 	return {
 		get: MultiKeyCache(key => {
-			const readFromDb = ReadFromDbIndex({ dbPromise, storeName, indexName, key, operation: 'get' })
+			const readFromDb = ReadFromDbIndex('get', { dbPromise, storeName, indexName, key })
 			const dbResult$$ = result$.filter(filterByKey(key))
 				.startWith(1)
 				.map(readFromDb)
@@ -33,7 +33,7 @@ function IndexSelector(dbPromise, result$, storeName, indexName) {
 			return adapt(dbResult$)
 		}),
 		getAll: MultiKeyCache(key => {
-			const readFromDb = ReadFromDbIndex({ dbPromise, storeName, indexName, key, operation: 'getAll' })
+			const readFromDb = ReadFromDbIndex('getAll', { dbPromise, storeName, indexName, key })
 			const dbResult$$ = result$.filter(filterByKey(key))
 				.startWith(1)
 				.map(readFromDb)
@@ -42,7 +42,7 @@ function IndexSelector(dbPromise, result$, storeName, indexName) {
 			return adapt(dbResult$)
 		}),
 		getAllKeys: MultiKeyCache(key => {
-			const readFromDb = ReadFromDbIndex({ dbPromise, storeName, indexName, key, operation: 'getAllKeys' })
+			const readFromDb = ReadFromDbIndex('getAllKeys', { dbPromise, storeName, indexName, key })
 			const dbResult$$ = result$.filter(filterByKey(key))
 				.filter(({ result }) => result.indexes.hasOwnProperty(indexName))
 				.filter(({ result }) => xor(result.indexes[indexName].oldValue !== key, result.indexes[indexName].newValue !== key))
@@ -53,7 +53,7 @@ function IndexSelector(dbPromise, result$, storeName, indexName) {
 			return adapt(dbResult$)
 		}),
 		count: MultiKeyCache(key => {
-			const readFromDb = ReadFromDbIndex({ dbPromise, storeName, indexName, key, operation: 'count' })
+			const readFromDb = ReadFromDbIndex('count', { dbPromise, storeName, indexName, key })
 			const dbResult$$ = result$.filter(filterByKey(key))
 				.startWith(1)
 				.map(readFromDb)
@@ -69,7 +69,7 @@ const xor = (a, b) => (a || b) && !(a && b)
 const resultIsInsertedOrDeleted = ({ result }) => result.operation === 'inserted' || result.operation === 'deleted'
 
 const GetSelector = (dbPromise, result$, storeName, key) => {
-	const readFromDb = ReadFromDb({ dbPromise, storeName, operation: 'get', key })
+	const readFromDb = ReadFromDb('get', { dbPromise, storeName, key })
 	const dbResult$$ = result$.filter(({ result }) => result.key === key)
 		.startWith(1)
 		.map(readFromDb)
@@ -79,7 +79,7 @@ const GetSelector = (dbPromise, result$, storeName, key) => {
 }
 
 const GetAllSelector = (dbPromise, result$, storeName) => {
-	const readFromDb = ReadFromDb({ dbPromise, storeName, operation: 'getAll' })
+	const readFromDb = ReadFromDb('getAll', { dbPromise, storeName })
 	const dbResult$$ = result$.startWith(1)
 		.map(readFromDb)
 		.map(promiseToStream)
@@ -88,7 +88,7 @@ const GetAllSelector = (dbPromise, result$, storeName) => {
 }
 
 const CountSelector = (dbPromise, result$, storeName) => {
-	const readFromDb = ReadFromDb({ dbPromise, storeName, operation: 'count' })
+	const readFromDb = ReadFromDb('count', { dbPromise, storeName })
 	const dbResult$$ = result$.startWith(1)
 		.map(readFromDb)
 		.map(promiseToStream)
@@ -97,7 +97,7 @@ const CountSelector = (dbPromise, result$, storeName) => {
 }
 
 const GetAllKeysSelector = (dbPromise, result$, storeName) => {
-	const readFromDb = ReadFromDb({ dbPromise, storeName, operation: 'getAllKeys' })
+	const readFromDb = ReadFromDb('getAllKeys', { dbPromise, storeName })
 	const dbResult$$ = result$.filter(resultIsInsertedOrDeleted)
 		.startWith(1)
 		.map(readFromDb)
@@ -106,14 +106,14 @@ const GetAllKeysSelector = (dbPromise, result$, storeName) => {
 	return adapt(dbResult$)
 }
 
-const ReadFromDb = ({ dbPromise, storeName, operation, key }) => async () => {
+const ReadFromDb = (operation, { dbPromise, storeName, key }) => async () => {
 	const db = await dbPromise
 	const data = await db.transaction(storeName)
 		.objectStore(storeName)[operation](key)
 	return data
 }
 
-const ReadFromDbIndex = ({ dbPromise, storeName, indexName, operation, key}) => async () => {
+const ReadFromDbIndex = (operation, { dbPromise, storeName, indexName, key}) => async () => {
 	const db = await dbPromise
 	const data = await db.transaction(storeName)
 		.objectStore(storeName)
