@@ -59,6 +59,9 @@ function main(sources) {
 
     // This returs a stream that will emit an event every time the count of objects in the 'ponies' store changes.
     const ponyCount$ = sources.IDB.store('ponies').count()
+
+    // This returns a stream that will emit an event with all the keys in the store everytime an object is added or removed.
+    const allKeys$ = sources.IDB.store('ponies').getAllKeys()
 }
 ```
 
@@ -122,27 +125,30 @@ const ponyTypeIndex = sources.IDB.store('ponies').index('type')
 ```
 
 The index selector returns an object with the following methods:
-- `getAll`: returns a stream subscribed to all items in the store that contain the selected index, sorted by the selected index. This method accepts an optional `key` argument. If provided, it will only subscribe to the items where the index property matches the provided key.
 - `get`: returns a stream subscribed to the first item found matching the `key`argument. This selector works better when the selected index is unique.
+- `getAll`: returns a stream subscribed to all items in the store that contain the selected index, sorted by the selected index. This method accepts an optional `key` argument. If provided, it will only subscribe to the items where the index property matches the provided key.
+- `getAllKeys`: returns a stream subscribed to the keys of all items in the store that contain the selected index. This method accepts an optional `key` argument. If provided, it will only subscribe to the items where the index property matches the provided key.
 - `count`: returns a stream subscribed the count of all items in the store that contain the selected index. This method accepts an optional argument `key` argument. If provided, it will only subscribe to the count of the items where the index property matches the provided key.
 
 You can check the [IDBIndex](https://developer.mozilla.org/en-US/docs/Web/API/IDBIndex) documentation for more details.
 
 ```javascript
 const ponyTypeIndex = sources.IDB.store('ponies').index('type')
-const poniesByType = ponyTypeIndex.getAll() // This returns a stream subscribed to all ponies, sorted by 'type'
-const unicorns = ponyTypeIndex.getAll('unicorn') // This returns a stream subscribed only to the ponies of type 'unicorn'
+const poniesByType$ = ponyTypeIndex.getAll() // This returns a stream subscribed to all ponies, sorted by 'type'
+const unicorns$ = ponyTypeIndex.getAll('unicorn') // This returns a stream subscribed only to the ponies of type 'unicorn'
 
-const ponyNameIndex = sources.IDB.store('ponies').index('name')
-const twilight = ponyNameIndex.get('Twilight Sparkle') // This returns a stream subscribed to the pony 'Twilight Sparkle'
+const ponyKeys$ = ponyTypeIndex.getAllKeys() // This returns a stream subscribed to all the keys of the ponies that have the 'type' property
+const unicornKeys$ = ponyTypeIndex.getAllKeys('unicorn') // This returns a stream subscribed to all the keys of the ponies where the 'type' property has the value 'unicorn'
 
-const unicornCount = ponyTypeIndex.count('unicorn') // This returns a stream subscribed to the count of unicorns
+const ponyNameIndex$ = sources.IDB.store('ponies').index('name')
+const twilight$ = ponyNameIndex.get('Twilight Sparkle') // This returns a stream subscribed to the pony 'Twilight Sparkle'
+
+const unicornCount$ = ponyTypeIndex.count('unicorn') // This returns a stream subscribed to the count of unicorns
 ```
 
 ### Error handling
 
-The cycle-idb driver exposes an `error$` stream that broadcasts all errors that occur during any database writing operation. The error events contain the following data:
-- `error`: the error thrown from IndexedDB.
+The cycle-idb driver exposes an `error$` stream that broadcasts all errors that occur during any database writing operation. The error event is the error thrown by IndexedDB with the following data added:
 - `query`: an object containing the following properties:
   - `operation`: the operation being performed (`'$put'`, `'$update'` or `'$delete'`).
   - `data`: the data sent to the database operation.
@@ -175,11 +181,11 @@ These listeners will also catch the errors raised by writing operations that aff
 
 ## Planned features
 
-- [ ] Store selectors
+- [x] ~~Store selectors~~
   - [x] ~~get~~
   - [x] ~~getAll~~
+  - [x] ~~getAllKeys~~
   - [x] ~~count~~
-  - [ ] getAllKeys
 - [ ] Update operations
   - [x] ~~put~~
   - [x] ~~delete~~
@@ -187,9 +193,9 @@ These listeners will also catch the errors raised by writing operations that aff
   - [ ] add
   - [ ] clear
 - [ ] Index selectors
-  - [x] ~~getAll~~
   - [x] ~~get~~
+  - [x] ~~getAll~~
   - [ ] getKey
-  - [ ] getAllKeys
+  - [x] ~~getAllKeys~~
   - [x] ~~count~~
 - [ ] Support for cursors
