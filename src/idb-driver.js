@@ -5,7 +5,7 @@ import { adapt } from '@cycle/run/lib/adapt'
 
 import idb from 'idb'
 
-import Store from './Store'
+import StoreSelector from './StoreSelector'
 import { MultiKeyCache } from './cache'
 
 
@@ -24,7 +24,7 @@ export default function makeIdbDriver(name, version, upgrade) {
 
 		return {
 			error$,
-			store: MultiKeyCache(name => Store(dbPromise, result$$, name)),
+			store: MultiKeyCache(name => StoreSelector(dbPromise, result$$, name)),
 		}
 	}
 }
@@ -52,7 +52,7 @@ function updatedIndexes(storeObj, old, data) {
 				newValue: data.hasOwnProperty(indexKeyPath) ? data[indexKeyPath] : undefined
 			}
 		})
-		.filter(({ oldValue, newValue }) => oldValue || newValue)
+		.filter(({ oldValue, newValue }) => oldValue !== undefined || newValue !== undefined)
 		.reduce((acc, { index, oldValue, newValue }) => {
 			acc[index] = {
 				oldValue,
@@ -69,7 +69,7 @@ const WriteOperation = (dbPromise, operation, merge=false) => async (store, data
 
 	const keyPath = storeObj.keyPath
 	const key = operation === 'delete' ? data : data[keyPath]
-	let old = {}
+	let old
 	if (key) {
 		old = await storeObj.get(key)
 	}

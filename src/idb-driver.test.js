@@ -10,6 +10,7 @@ import {
 	mockDbWithIndex,
 	mockDbWithTypeIndex,
 	mockDbWithNameIndex,
+	mockDbWithNumberIndex,
 } from './idb-driver.mock'
 import idb from 'idb'
 
@@ -1315,6 +1316,32 @@ test('index(...).getAllKeys(key) should not update when an element with a differ
 			value => t.deepEqual(value, [ 'Minuette', 'Twilight Sparkle' ], 'Minuette and Twilight Sparkle are counted'),
 			value => t.fail(`Unexpected value: ${JSON.stringify(value)}`),
 		]))
+})
+
+test('index(...) should work with numerical indexes', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithNumberIndex([
+		{ name: 'Twilight Sparkle', isManeSix: 1 },
+		{ name: 'Rainbow Dash', isManeSix: 1 },
+		{ name: 'Minuette', isManeSix: 0 },
+		{ name: 'Bon Bon' },
+	]))(xs.never())
+	driver.store('ponies').index('isManeSix').getAll()
+		.addListener({
+			next: value => t.deepEqual(value, [
+				{ name: 'Minuette', isManeSix: 0 },
+				{ name: 'Twilight Sparkle', isManeSix: 1 },
+				{ name: 'Rainbow Dash', isManeSix: 1 },
+			], '.getAll() returns all ponies with the index')
+		})
+	driver.store('ponies').index('isManeSix').getAll(1)
+		.addListener({
+			next: value => t.deepEqual(value, [
+				{ name: 'Twilight Sparkle', isManeSix: 1 },
+				{ name: 'Rainbow Dash', isManeSix: 1 },
+			], '.getAll(true) returns all ponies with the index being true')
+		})
 })
 
 test.skip('The read event fired after a DB update event should contain only the data updated by that event', t => {

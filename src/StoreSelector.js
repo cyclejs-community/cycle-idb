@@ -7,7 +7,7 @@ import { adapt } from '@cycle/run/lib/adapt'
 import { SingleKeyCache, MultiKeyCache } from './cache'
 
 
-export default function Store(dbPromise, result$$, storeName) {
+export default function StoreSelector(dbPromise, result$$, storeName) {
 	const result$ = flattenConcurrently(result$$.filter($ => $._store === storeName))
 
 	return {
