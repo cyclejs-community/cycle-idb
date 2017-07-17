@@ -54,33 +54,10 @@ function updatedIndexes(storeObj, old, data) {
 		})
 		.filter(({ oldValue, newValue }) => oldValue || newValue)
 		.reduce((acc, { index, oldValue, newValue }) => {
-			const entry = acc[index] || {
+			acc[index] = {
 				oldValue,
 				newValue,
 			}
-
-			/*
-			const entry = acc[index] || {
-				inserted: new Set(),
-				deleted: new Set(),
-				updated: new Set(),
-				all: new Set(),
-			}
-			if (oldValue) entry.all.add(oldValue)
-			if (newValue) entry.all.add(newValue)
-
-			if (oldValue && oldValue === newValue) {
-				entry.updated.add(oldValue)
-			}
-			if (oldValue && oldValue !== newValue) {
-				entry.deleted.add(oldValue)
-			}
-			if (newValue && newValue !== oldValue) {
-				entry.inserted.add(newValue)
-			}
-			*/
-			
-			acc[index] = entry
 			return acc
 		}, {})
 }
@@ -96,10 +73,9 @@ const WriteOperation = (dbPromise, operation, merge=false) => async (store, data
 	if (key) {
 		old = await storeObj.get(key)
 	}
-	//const old = await storeObj.get(key)
 
-	const modifiedIndexes = updatedIndexes(storeObj, old, data)
 	const updatedData = merge ? {...old, ...data} : data
+	const modifiedIndexes = updatedIndexes(storeObj, old, updatedData)
 
 	const [ result, _ ] = await Promise.all([
 		storeObj[operation](updatedData),

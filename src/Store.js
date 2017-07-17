@@ -42,7 +42,7 @@ function IndexSelector(dbPromise, result$, storeName, indexName) {
 		getAllKeys: MultiKeyCache(key => {
 			const filteredResult$ = result$
 				.filter(({ result }) => result.indexes.hasOwnProperty(indexName))
-				.filter(({ result }) => key || xor(result.indexes[indexName].oldValue !== undefined, result.indexes[indexName].newValue !== undefined))
+				.filter(({ result }) => xor(result.indexes[indexName].oldValue !== key, result.indexes[indexName].newValue !== key))
 				.filter(filterByKey(key))
 			const options = { dbPromise, storeName, indexName, key, operation: 'getAllKeys' }
 			return DbSelector(filteredResult$, ReadDbIndexListener, options)
