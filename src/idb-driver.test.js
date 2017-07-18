@@ -15,6 +15,7 @@ import {
 import idb from 'idb'
 
 import makeIdbDriver, {
+	$add,
 	$delete,
 	$put,
 	$update,
@@ -1342,6 +1343,31 @@ test('index(...) should work with numerical indexes', t => {
 				{ name: 'Rainbow Dash', isManeSix: 1 },
 			], '.getAll(true) returns all ponies with the index being true')
 		})
+})
+
+test('$add should insert a new object in the store', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase())(xs.of(
+		$add('ponies', { name: 'Twilight Sparkle', type: 'unicorn' })
+	))
+	driver.store('ponies').getAll().addListener(sequenceListener(t)([
+		value => t.deepEqual(value, [], 'There are no ponies in the store'),
+		value => t.deepEqual(value, [{ name: 'Twilight Sparkle', type: 'unicorn' }], 'Twilight is added'),
+	]))
+})
+
+test('$add should raise an error when adding an object with a key that already exists', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase([
+		{ name: 'Twilight Sparkle', type: 'unicorn' }
+	]))(xs.of(
+		$add('ponies', { name: 'Twilight Sparkle', type: 'unicorn' }),
+	))
+	driver.error$.addListener({
+		error: e => t.deepEqual(e.query, $add('ponies', { name: 'Twilight Sparkle', type: 'unicorn' }))
+	})
 })
 
 test.skip('The read event fired after a DB update event should contain only the data updated by that event', t => {
