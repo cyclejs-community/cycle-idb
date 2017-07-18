@@ -7,11 +7,11 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-        keys:
-          - v1-npm-deps-{{ checksum "package.json" }}
+          keys:
+            - v1-npm-deps-{{ checksum "package.json" }}
       - run: npm install
       - run: npm test
       - save_cache:
-        key: v1-npm-deps-{{ checksum "package.json" }}
-        paths:
-          - node_modules
+          key: v1-npm-deps-{{ checksum "package.json" }}
+          paths:
+            - node_modules
