@@ -16,6 +16,7 @@ export default function makeIdbDriver(name, version, upgrade) {
 		$put: WriteOperation(dbPromise, 'put'),
 		$delete: WriteOperation(dbPromise, 'delete'),
 		$update: WriteOperation(dbPromise, 'put', true),
+		$add: WriteOperation(dbPromise, 'add'),
 	}
 
 	return function idbDriver(write$) {
@@ -41,6 +42,10 @@ export function $update(store, data) {
 	return { store, data, operation: '$update' }
 }
 
+export function $add(store, data) {
+	return { store, data, operation: '$add' }
+}
+
 function updatedIndexes(storeObj, old, data) {
 	return Array.from(storeObj.indexNames)
 		.map(index => {
@@ -53,13 +58,7 @@ function updatedIndexes(storeObj, old, data) {
 			}
 		})
 		.filter(({ oldValue, newValue }) => oldValue !== undefined || newValue !== undefined)
-		.reduce((acc, { index, oldValue, newValue }) => {
-			acc[index] = {
-				oldValue,
-				newValue,
-			}
-			return acc
-		}, {})
+		.reduce((acc, { index, oldValue, newValue }) => ({...acc, [index]: { oldValue, newValue }}), {})
 }
 
 const WriteOperation = (dbPromise, operation, merge=false) => async (store, data) => {
@@ -89,24 +88,14 @@ const WriteOperation = (dbPromise, operation, merge=false) => async (store, data
 }
 
 function executeDbUpdate({ dbOperation, operation, store, data }) {
-	const result$ = xs.createWithMemory({
-		start: listener => {
-			dbOperation(store, data)
-				.then(result => {
-					listener.next({
-						result,
-						store
-					})
-					listener.complete()
-				})
-				.catch(error => {
-					error = error || new Error(error) // Why does idb throw null errors?
-					error.query = { store, data, operation }
-					listener.error(error)
-				})
-		},
-		stop: () => {},
-	})
+	const p = dbOperation(store, data)
+		.catch(e => {
+			e = e || new Error(e) // Why does idb throw null errors?
+			e.query = { store, data, operation }
+			throw e
+		})
+	const result$ = xs.fromPromise(p)
+		.map(result => ({ result, store }))
 	result$.addListener({
 		next: () => {},
 		complete: () => {},
