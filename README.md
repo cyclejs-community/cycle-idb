@@ -69,16 +69,17 @@ function main(sources) {
 
 The cycle-idb driver receives a stream that accepts three database operations: `put`, `update` and `delete`. Factories for these operations can be imported from the `cycle-idb` package.
 
+- `add`: adds an object to the store. If an object with the same primary key already exists, the operation will fail and send an error.
 - `put`: adds an object to the store, replacing it if an object with the same primary key already exists.
 - `update`: adds an object to the store. If an object with the same primary key already exists, it will update the object with the fields existing in the event, but keeping the fields that are not present in the event.
 - `delete`: removes any object from the store with the primary key sent in the event.
 
 ```javascript
 import fromDiagram from 'xstream/extra/fromDiagram'
-import { $put, $update, $delete } from 'cycle-idb'
+import { $add, $put, $update, $delete } from 'cycle-idb'
 
 function main(sources) {
-    const updateDb$ = fromDiagram('-a-b-c-|', {
+    const updateDb$ = fromDiagram('-a-b-c-d-|', {
         values: {
             // Will add the entry 'Twilight Sparkle' to the store 'ponies'
             a: $put('ponies', { name: 'Twilight Sparkle', type: 'unicorn' }),
@@ -86,6 +87,8 @@ function main(sources) {
             b: $update('ponies', { name: 'Twilight Sparkle', element: 'magic' }),
             // Will remove 'Twilight Sparkle' from the store 'ponies'
             c: $delete('ponies', 'Twilight Sparkle'),
+            // Will add the entry 'Rainbow Dash' to the store 'ponies'
+            d: $add('ponies', { name: 'Rainbow Dash', type: 'pegasus' }),
         }
     })
 
