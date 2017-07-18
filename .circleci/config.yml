@@ -12,6 +12,6 @@ jobs:
       - run: npm install
       - run: npm test
       - save_cache:
-          key: v1-npm-deps-{{ checksum "package.json" }}
+          key: v1-npm-deps-{{ checksum "package.json" }}
           paths:
             - node_modules
