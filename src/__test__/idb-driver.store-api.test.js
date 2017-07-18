@@ -97,6 +97,18 @@ test('store(...).getAll() should send empty list when a listener is registered t
 		})
 })
 
+test('store(...).getAll() should be updated when an object is added to the store', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase())(xs.of(
+		$add('ponies', { name: 'Fluttershy' })
+	))
+	driver.store('ponies').getAll().addListener(sequenceListener(t)([
+		value => t.deepEqual(value, [], 'The store is empty'),
+		value => t.deepEqual(value, [{ name: 'Fluttershy' }], 'Fluttershy is added'),
+	]))
+})
+
 test('store(...).get() selector should work', t => {
 	t.plan(3)
 
@@ -155,6 +167,30 @@ test('store(...).get() selector should send undefined when value is deleted', t 
 			value => t.deepEqual(value, { name: 'Rarity', type: 'unicorn' }, 'Rarity is in database'),
 			value => t.equal(value, undefined, 'When Rarity is removed, undefined is sent'),
 		]))
+})
+
+test('store(...).get(key) should be updated when an object with the given key is added', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase())(xs.of(
+		$add('ponies', { name: 'Fluttershy' })
+	))
+	driver.store('ponies').get('Fluttershy').addListener(sequenceListener(t)([
+		value => t.deepEqual(value, undefined, 'Fluttershy is not in the store'),
+		value => t.deepEqual(value, { name: 'Fluttershy' }, 'Fluttershy is added'),
+	]))
+})
+
+test('store(...).get(key) should not be updated when an object with a different key is added', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase())(xs.of(
+		$add('ponies', { name: 'Fluttershy' })
+	))
+	driver.store('ponies').get('Rainbow Dash').addListener(sequenceListener(t)([
+		value => t.deepEqual(value, undefined, 'The store is empty'),
+		value => t.fail(`Unexpected value: ${JSON.stringify(value)}`),
+	]))
 })
 
 test('store(...).count() should start with 0 when store is empty', t => {
@@ -234,6 +270,18 @@ test('store(...).count() should only broadcast when count changes', t => {
 	]))
 })
 
+test('store(...).count() should be updated when an object is added to the store', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase())(xs.of(
+		$add('ponies', { name: 'Fluttershy' })
+	))
+	driver.store('ponies').count().addListener(sequenceListener(t)([
+		value => t.deepEqual(value, 0, 'The store is empty'),
+		value => t.deepEqual(value, 1, 'Fluttershy is added'),
+	]))
+})
+
 test('store(...).getAllKeys() should return all keys present in the store', t => {
 	t.plan(1)
 
@@ -294,5 +342,18 @@ test('store(...).getAllKeys() should not get updates when an existing object is 
 		.addListener(sequenceListener(t)([
 			value => t.deepEqual(value, [ 'Pinkie Pie', 'Rainbow Dash', 'Twilight Sparkle' ], 'Twilight, Rainbow and Pinkie are in the list'),
 			value => t.fail(`Unexpected value: ${JSON.stringify(value)}`),
+		]))
+})
+
+test('store(...).getAllKeys() should get an update when an object is added to the store', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase())(xs.of(
+		$add('ponies', { name: 'Fluttershy' })
+	))
+	driver.store('ponies').getAllKeys()
+		.addListener(sequenceListener(t)([
+			value => t.deepEqual(value, [], 'Database is empty'),
+			value => t.deepEqual(value, [ 'Fluttershy' ], 'Fluttershy is added'),
 		]))
 })
