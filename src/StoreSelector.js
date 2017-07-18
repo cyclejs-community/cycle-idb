@@ -25,7 +25,7 @@ function IndexSelector(dbPromise, result$, storeName, indexName) {
 	return {
 		get: MultiKeyCache(key => {
 			const readFromDb = ReadFromDbIndex('get', { dbPromise, storeName, indexName, key })
-			const dbResult$$ = result$.filter(filterByKey(key))
+			const dbResult$$ = result$.filter(any(resultIsCleared, filterByKey(key)))
 				.startWith(1)
 				.map(readFromDb)
 				.map(promiseToStream)
@@ -34,7 +34,7 @@ function IndexSelector(dbPromise, result$, storeName, indexName) {
 		}),
 		getAll: MultiKeyCache(key => {
 			const readFromDb = ReadFromDbIndex('getAll', { dbPromise, storeName, indexName, key })
-			const dbResult$$ = result$.filter(filterByKey(key))
+			const dbResult$$ = result$.filter(any(resultIsCleared, filterByKey(key)))
 				.startWith(1)
 				.map(readFromDb)
 				.map(promiseToStream)
@@ -43,9 +43,9 @@ function IndexSelector(dbPromise, result$, storeName, indexName) {
 		}),
 		getAllKeys: MultiKeyCache(key => {
 			const readFromDb = ReadFromDbIndex('getAllKeys', { dbPromise, storeName, indexName, key })
-			const dbResult$$ = result$.filter(filterByKey(key))
-				.filter(({ result }) => result.indexes.hasOwnProperty(indexName))
-				.filter(({ result }) => xor(result.indexes[indexName].oldValue !== key, result.indexes[indexName].newValue !== key))
+			const dbResult$$ = result$.filter(any(resultIsCleared, filterByKey(key)))
+				.filter(any(resultIsCleared, ({ result }) => result.indexes.hasOwnProperty(indexName)))
+				.filter(any(resultIsCleared, ({ result }) => xor(result.indexes[indexName].oldValue !== key, result.indexes[indexName].newValue !== key)))
 				.startWith(1)
 				.map(readFromDb)
 				.map(promiseToStream)
@@ -54,7 +54,7 @@ function IndexSelector(dbPromise, result$, storeName, indexName) {
 		}),
 		count: MultiKeyCache(key => {
 			const readFromDb = ReadFromDbIndex('count', { dbPromise, storeName, indexName, key })
-			const dbResult$$ = result$.filter(filterByKey(key))
+			const dbResult$$ = result$.filter(any(resultIsCleared, filterByKey(key)))
 				.startWith(1)
 				.map(readFromDb)
 				.map(promiseToStream)
@@ -66,11 +66,22 @@ function IndexSelector(dbPromise, result$, storeName, indexName) {
 
 const xor = (a, b) => (a || b) && !(a && b)
 
+const any = (...fns) => value => {
+	for (let fn of fns) {
+		if (fn(value)) {
+			return true
+		}
+	}
+	return false
+}
+
 const resultIsInsertedOrDeleted = ({ result }) => result.operation === 'inserted' || result.operation === 'deleted'
+
+const resultIsCleared = ({ result }) => result.operation === 'cleared'
 
 const GetSelector = (dbPromise, result$, storeName, key) => {
 	const readFromDb = ReadFromDb('get', { dbPromise, storeName, key })
-	const dbResult$$ = result$.filter(({ result }) => result.key === key)
+	const dbResult$$ = result$.filter(any(resultIsCleared, ({ result }) => result.key === key))
 		.startWith(1)
 		.map(readFromDb)
 		.map(promiseToStream)
@@ -98,7 +109,7 @@ const CountSelector = (dbPromise, result$, storeName) => {
 
 const GetAllKeysSelector = (dbPromise, result$, storeName) => {
 	const readFromDb = ReadFromDb('getAllKeys', { dbPromise, storeName })
-	const dbResult$$ = result$.filter(resultIsInsertedOrDeleted)
+	const dbResult$$ = result$.filter(any(resultIsInsertedOrDeleted, resultIsCleared))
 		.startWith(1)
 		.map(readFromDb)
 		.map(promiseToStream)

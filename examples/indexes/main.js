@@ -1,9 +1,9 @@
 import xs from 'xstream'
 
 import { run } from '@cycle/run'
-import { makeDOMDriver, div, ul, li, h4 } from '@cycle/dom'
+import { makeDOMDriver, div, ul, li, h4, button } from '@cycle/dom'
 
-import makeIdbDriver, { $put } from 'cycle-idb'
+import makeIdbDriver, { $put, $clear } from 'cycle-idb'
 
 
 const PONIES = [
@@ -19,6 +19,9 @@ function main(sources) {
 	const addPonies$ = xs.periodic(1000).take(6)
 		.map(x => PONIES[x])
 		.map(x => $put('ponies', x))
+	const clearPonies$ = sources.DOM.select('.clear').events('click')
+		.map(x => $clear('ponies'))
+	const updateDb$ = xs.merge(addPonies$, clearPonies$)
 	
 	const ponyTypeIndex = sources.IDB.store('ponies').index('type')
 	const unicornVtree$ = ponyTypeIndex.getAll('unicorn')
@@ -56,11 +59,12 @@ function main(sources) {
 				pegasi,
 				h4(`Earth Ponies (${earthPonyCount})`),
 				earthPonies,
+				button('.clear', 'Clear'),
 			])
 		})
 	
 	return {
-		IDB: addPonies$,
+		IDB: updateDb$,
 		DOM: vtree$,
 	}
 }

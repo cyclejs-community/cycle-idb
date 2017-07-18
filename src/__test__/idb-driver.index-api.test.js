@@ -23,6 +23,7 @@ import makeIdbDriver, {
 	$delete,
 	$put,
 	$update,
+	$clear,
 } from '../idb-driver'
 
 
@@ -868,4 +869,60 @@ test('index(...) should work with numerical indexes', t => {
 				{ name: 'Rainbow Dash', isManeSix: 1 },
 			], '.getAll(true) returns all ponies with the index being true')
 		})
+})
+
+test('$clear should notify all index selectors', t => {
+	t.plan(14)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithIndex([
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+		{ name: 'Pinkie Pie', type: 'earth pony' },
+		{ name: 'Rainbow Dash', type: 'pegasus' },
+		{ name: 'Spike' },
+	]))(fromDiagram('-a-|', {
+		values: {
+			a: $clear('ponies'),
+		},
+		timeUnit: 20,
+	}))
+	driver.store('ponies').index('type').getAll().addListener(sequenceListener(t)([
+		value => t.deepEqual(value, [
+			{ id: 2, name: 'Pinkie Pie', type: 'earth pony' },
+			{ id: 3, name: 'Rainbow Dash', type: 'pegasus' },
+			{ id: 1, name: 'Twilight Sparkle', type: 'unicorn' },
+		], 'Everypony is here!'),
+		value => t.deepEqual(value, [], 'Clear is propagated to index(\'type\').getAll()')
+	]))
+	driver.store('ponies').index('type').getAll('unicorn').addListener(sequenceListener(t)([
+		value => t.deepEqual(value, [
+			{ id: 1, name: 'Twilight Sparkle', type: 'unicorn' },
+		], 'Unicorns are here!'),
+		value => t.deepEqual(value, [], 'Clear is propagated to index(\'type\').getAll(\'unicorn\')')
+	]))
+	driver.store('ponies').index('name').get('Twilight Sparkle').addListener(sequenceListener(t)([
+		value => t.deepEqual(value, { id: 1, name: 'Twilight Sparkle', type: 'unicorn' }, 'Twilight is here!'),
+		value => t.deepEqual(value, undefined, 'Clear is propagated to index(\'name\').get(\'Twilight Sparkle\')')
+	]))
+	driver.store('ponies').index('type').getAllKeys().addListener(sequenceListener(t)([
+		value => t.deepEqual(value, [
+			2, // Pinkie Pie
+			3, // Rainbow Dash
+			1, // Twilight Sparkle
+		], 'Everypony is here!'),
+		value => t.deepEqual(value, [], 'Clear is propagated to index(\'type\').getAllKeys()')
+	]))
+	driver.store('ponies').index('type').getAllKeys('unicorn').addListener(sequenceListener(t)([
+		value => t.deepEqual(value, [
+			1, // Twilight Sparkle
+		], 'Unicorns is here!'),
+		value => t.deepEqual(value, [], 'Clear is propagated to index(\'type\').getAllKeys(\'unicorn\')')
+	]))
+	driver.store('ponies').index('type').count().addListener(sequenceListener(t)([
+		value => t.deepEqual(value, 3, 'Everypony is here!'),
+		value => t.deepEqual(value, 0, 'Clear is propagated to index(\'type\').count()')
+	]))
+	driver.store('ponies').index('type').count('unicorn').addListener(sequenceListener(t)([
+		value => t.deepEqual(value, 1, 'Unicorns are here!'),
+		value => t.deepEqual(value, 0, 'Clear is propagated to index(\'type\').count(\'unicorn\')')
+	]))
 })

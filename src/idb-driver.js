@@ -17,6 +17,7 @@ export default function makeIdbDriver(name, version, upgrade) {
 		$delete: WriteOperation(dbPromise, 'delete'),
 		$update: WriteOperation(dbPromise, 'put', true),
 		$add: WriteOperation(dbPromise, 'add'),
+		$clear: ClearOperation(dbPromise),
 	}
 
 	return function idbDriver(write$) {
@@ -46,6 +47,10 @@ export function $add(store, data) {
 	return { store, data, operation: '$add' }
 }
 
+export function $clear(store) {
+	return { store, operation: '$clear' }
+}
+
 function updatedIndexes(storeObj, old, data) {
 	return Array.from(storeObj.indexNames)
 		.map(index => {
@@ -59,6 +64,19 @@ function updatedIndexes(storeObj, old, data) {
 		})
 		.filter(({ oldValue, newValue }) => oldValue !== undefined || newValue !== undefined)
 		.reduce((acc, { index, oldValue, newValue }) => ({...acc, [index]: { oldValue, newValue }}), {})
+}
+
+const ClearOperation = (dbPromise) => async store => {
+	const db = await dbPromise
+	const tx = db.transaction(store, 'readwrite')
+
+	const [ result, _ ] = await Promise.all([
+		tx.objectStore(store).clear(),
+		tx.complete,
+	])
+	return {
+		operation: 'cleared',
+	}
 }
 
 const WriteOperation = (dbPromise, operation, merge=false) => async (store, data) => {

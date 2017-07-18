@@ -73,13 +73,14 @@ The cycle-idb driver receives a stream that accepts three database operations: `
 - `put`: adds an object to the store, replacing it if an object with the same primary key already exists.
 - `update`: adds an object to the store. If an object with the same primary key already exists, it will update the object with the fields existing in the event, but keeping the fields that are not present in the event.
 - `delete`: removes any object from the store with the primary key sent in the event.
+- `clear`: removes all records from the store.
 
 ```javascript
 import fromDiagram from 'xstream/extra/fromDiagram'
-import { $add, $put, $update, $delete } from 'cycle-idb'
+import { $add, $put, $update, $delete, $clear } from 'cycle-idb'
 
 function main(sources) {
-    const updateDb$ = fromDiagram('-a-b-c-d-|', {
+    const updateDb$ = fromDiagram('-a-b-c-d-e-|', {
         values: {
             // Will add the entry 'Twilight Sparkle' to the store 'ponies'
             a: $put('ponies', { name: 'Twilight Sparkle', type: 'unicorn' }),
@@ -89,6 +90,8 @@ function main(sources) {
             c: $delete('ponies', 'Twilight Sparkle'),
             // Will add the entry 'Rainbow Dash' to the store 'ponies'
             d: $add('ponies', { name: 'Rainbow Dash', type: 'pegasus' }),
+            // Will remove everypony from the store 'ponies'
+            e: $clear('ponies'),
         }
     })
 
@@ -189,12 +192,12 @@ These listeners will also catch the errors raised by writing operations that aff
   - [x] ~~getAll~~
   - [x] ~~getAllKeys~~
   - [x] ~~count~~
-- [ ] Update operations
+- [x] Update operations
   - [x] ~~put~~
   - [x] ~~delete~~
   - [x] ~~update~~
-  - [ ] add
-  - [ ] clear
+  - [x] ~~add~~
+  - [x] ~~clear~~
 - [ ] Index selectors
   - [x] ~~get~~
   - [x] ~~getAll~~

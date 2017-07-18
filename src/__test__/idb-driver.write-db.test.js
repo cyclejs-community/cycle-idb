@@ -20,6 +20,7 @@ import makeIdbDriver, {
 	$delete,
 	$put,
 	$update,
+	$clear,
 } from '../idb-driver'
 
 
@@ -183,4 +184,63 @@ test('Errors generated when using $add should propagate to get listeners', t => 
 	driver.store('ponies').count().addListener({
 		error: e => t.deepEqual(e.query, $add('ponies', { name: 'Twilight Sparkle', type: 'alicorn' }), 'Error is propagated to count() listener')
 	})
+})
+
+test('$clear should remove all items in the store', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase([
+		{ name: 'Twilight Sparkle' },
+		{ name: 'Pinkie Pie' },
+		{ name: 'Rainbow Dash' },
+	]))(xs.of(
+		$clear('ponies')
+	))
+	driver.store('ponies').getAll().addListener(sequenceListener(t)([
+		value => t.deepEqual(value, [
+			{ name: 'Pinkie Pie' },
+			{ name: 'Rainbow Dash' },
+			{ name: 'Twilight Sparkle' },
+		], 'Everypony is here :)'),
+		value => t.deepEqual(value, [], 'Nopony is here :(')
+	]))
+})
+
+test('$clear should notify all store selectors', t => {
+	t.plan(8)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase([
+		{ name: 'Twilight Sparkle' },
+		{ name: 'Pinkie Pie' },
+		{ name: 'Rainbow Dash' },
+	]))(fromDiagram('-a-|', {
+		values: {
+			a: $clear('ponies'),
+		},
+		timeUnit: 20,
+	}))
+	driver.store('ponies').getAll().addListener(sequenceListener(t)([
+		value => t.deepEqual(value, [
+			{ name: 'Pinkie Pie' },
+			{ name: 'Rainbow Dash' },
+			{ name: 'Twilight Sparkle' },
+		], 'Everypony is here!'),
+		value => t.deepEqual(value, [], 'Clear is propagated to getAll()')
+	]))
+	driver.store('ponies').get('Twilight Sparkle').addListener(sequenceListener(t)([
+		value => t.deepEqual(value, { name: 'Twilight Sparkle' }, 'Twilight is here!'),
+		value => t.deepEqual(value, undefined, 'Clear is propagated to get(\'Twilight Sparkle\')')
+	]))
+	driver.store('ponies').getAllKeys().addListener(sequenceListener(t)([
+		value => t.deepEqual(value, [
+			'Pinkie Pie',
+			'Rainbow Dash',
+			'Twilight Sparkle',
+		], 'Everypony is here!'),
+		value => t.deepEqual(value, [], 'Clear is propagated to getAllKeys()')
+	]))
+	driver.store('ponies').count().addListener(sequenceListener(t)([
+		value => t.deepEqual(value, 3, 'Everypony is here!'),
+		value => t.deepEqual(value, 0, 'Clear is propagated to count()')
+	]))
 })
