@@ -52,6 +52,16 @@ function IndexSelector(dbPromise, result$, storeName, indexName) {
 			const dbResult$ = flattenConcurrently(dbResult$$)
 			return adapt(dbResult$)
 		}),
+		getKey: MultiKeyCache(key => {
+			const readFromDb = ReadFromDbIndex('getKey', { dbPromise, storeName, indexName, key })
+			const dbResult$$ = result$.filter(any(resultIsCleared, filterByKey(key)))
+				.filter(any(resultIsCleared, resultIsInsertedOrDeleted))
+				.startWith(1)
+				.map(readFromDb)
+				.map(promiseToStream)
+			const dbResult$ = flattenConcurrently(dbResult$$)
+			return adapt(dbResult$)
+		}),
 		count: MultiKeyCache(key => {
 			const readFromDb = ReadFromDbIndex('count', { dbPromise, storeName, indexName, key })
 			const dbResult$$ = result$.filter(any(resultIsCleared, filterByKey(key)))

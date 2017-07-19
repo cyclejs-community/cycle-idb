@@ -14,6 +14,6 @@ export const sequenceListener = test => (listeners, errorHandler, bounded=true) 
 			listeners[current](value)
 			current++
 		},
-		error: errorHandler || (e => test.fail(JSON.stringify(e))),
+		error: errorHandler || (e => test.fail(e.message)),
 	}
 }
