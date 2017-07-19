@@ -134,6 +134,7 @@ The index selector returns an object with the following methods:
 - `get`: returns a stream subscribed to the first item found matching the `key`argument. This selector works better when the selected index is unique.
 - `getAll`: returns a stream subscribed to all items in the store that contain the selected index, sorted by the selected index. This method accepts an optional `key` argument. If provided, it will only subscribe to the items where the index property matches the provided key.
 - `getAllKeys`: returns a stream subscribed to the keys of all items in the store that contain the selected index. This method accepts an optional `key` argument. If provided, it will only subscribe to the items where the index property matches the provided key.
+- `getKey`: the same as `getAllKeys` but returns only the first object matching the index with the given `key`. This selector works better when the selected index is unique.
 - `count`: returns a stream subscribed the count of all items in the store that contain the selected index. This method accepts an optional argument `key` argument. If provided, it will only subscribe to the count of the items where the index property matches the provided key.
 
 You can check the [IDBIndex](https://developer.mozilla.org/en-US/docs/Web/API/IDBIndex) documentation for more details.
@@ -192,16 +193,17 @@ These listeners will also catch the errors raised by writing operations that aff
   - [x] ~~getAll~~
   - [x] ~~getAllKeys~~
   - [x] ~~count~~
-- [x] Update operations
+- [x] ~~Update operations~~
   - [x] ~~put~~
   - [x] ~~delete~~
   - [x] ~~update~~
   - [x] ~~add~~
   - [x] ~~clear~~
-- [ ] Index selectors
+- [x] ~~Index selectors~~
   - [x] ~~get~~
   - [x] ~~getAll~~
-  - [ ] getKey
+  - [x] ~~getKey~~
   - [x] ~~getAllKeys~~
   - [x] ~~count~~
-- [ ] Support for cursors
+- [ ] Support cursors
+- [ ] Support IDBKeyRange

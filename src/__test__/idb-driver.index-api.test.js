@@ -926,3 +926,124 @@ test('$clear should notify all index selectors', t => {
 		value => t.deepEqual(value, 0, 'Clear is propagated to index(\'type\').count(\'unicorn\')')
 	]))
 })
+
+test('index(...).getKey(value) should send the key of the object with the given value for the index', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithNameIndex([
+		{ name: 'Moondancer', type: 'unicorn' }
+	]))(xs.never())
+	driver.store('ponies').index('name').getKey('Moondancer').addListener(sequenceListener(t)([
+		value => t.deepEqual(value, 1, 'Got Moondancer\'s key')
+	]))
+})
+
+test('index(...).getKey(value) should update when an object with the given value is inserted', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithNameIndex())(xs.of(
+		$add('ponies', { name: 'Moondancer' })
+	))
+	driver.store('ponies').index('name').getKey('Moondancer').addListener(sequenceListener(t)([
+		value => t.deepEqual(value, undefined, 'Moondancer is not yet in the store'),
+		value => t.deepEqual(value, 1, 'Moondancer is added to the store'),
+	]))
+})
+
+test('index(...).getKey(value) should update when an object with the given value is deleted', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithNameIndex([
+		{ name: 'Moondancer', type: 'unicorn' }
+	]))(xs.of(
+		$delete('ponies', 1) // Moondancer
+	))
+	driver.store('ponies').index('name').getKey('Moondancer').addListener(sequenceListener(t)([
+		value => t.deepEqual(value, 1, 'Got Moondancer\'s key'),
+		value => t.deepEqual(value, undefined, 'Moondancer was removed'),
+	]))
+})
+
+test('index(...).getKey(value) should not update when an object with the given value is modified', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithIndex([
+		{ name: 'Moondancer', type: 'unicorn' },
+	]))(xs.of(
+		$update('ponies', { id: 1, colour: 'cream' }) // Moondancer
+	))
+	driver.store('ponies').index('name').getKey('Moondancer').addListener(sequenceListener(t)([
+		value => t.deepEqual(value, 1, 'Got Moondancer\'s key'),
+		value => t.fail(`Unexpected value: ${JSON.stringify(value)}`),
+	]))
+})
+
+test('index(...).getKey(value) should update when the store is cleared', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithIndex([
+		{ name: 'Moondancer', type: 'unicorn' },
+	]))(xs.of(
+		$clear('ponies')
+	))
+	driver.store('ponies').index('name').getKey('Moondancer').addListener(sequenceListener(t)([
+		value => t.deepEqual(value, 1, 'Got Moondancer\'s key'),
+		value => t.deepEqual(value, undefined, 'Received update when store is cleared'),
+	]))
+})
+
+test('index(...).getKey(value) should not update when an object with a different value is inserted', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithIndex([
+		{ name: 'Moondancer', type: 'unicorn' },
+	]))(xs.of(
+		$put('ponies', { name: 'Minuette' })
+	))
+	driver.store('ponies').index('name').getKey('Moondancer').addListener(sequenceListener(t)([
+		value => t.deepEqual(value, 1, 'Got Moondancer\'s key'),
+		value => t.fail(`Unexpected value: ${JSON.stringify(value)}`),
+	]))
+})
+
+test('index(...).getKey(value) should not update when an object with a different value is deleted', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithIndex([
+		{ name: 'Moondancer', type: 'unicorn' },
+		{ name: 'Minuette', type: 'unicorn' },
+	]))(xs.of(
+		$delete('ponies', 2) // Minuette
+	))
+	driver.store('ponies').index('name').getKey('Moondancer').addListener(sequenceListener(t)([
+		value => t.deepEqual(value, 1, 'Got Moondancer\'s key'),
+		value => t.fail(`Unexpected value: ${JSON.stringify(value)}`),
+	]))
+})
+
+test('index(...).getKey(value) should not update when an object with a different value is modified', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithIndex([
+		{ name: 'Moondancer', type: 'unicorn' },
+		{ name: 'Minuette', type: 'unicorn' },
+	]))(xs.of(
+		$update('ponies', { id: 2, colour: 'blue' }) // Minuette
+	))
+	driver.store('ponies').index('name').getKey('Moondancer').addListener(sequenceListener(t)([
+		value => t.deepEqual(value, 1, 'Got Moondancer\'s key'),
+		value => t.fail(`Unexpected value: ${JSON.stringify(value)}`),
+	]))
+})
+
+test('index(...).getKey(value) should return first element with index matching value for non-unique indexes', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithIndex([
+		{ name: 'Moondancer', type: 'unicorn' },
+		{ name: 'Minuette', type: 'unicorn' },
+	]))(xs.never())
+	driver.store('ponies').index('name').getKey('Moondancer').addListener(sequenceListener(t)([
+		value => t.deepEqual(value, 1, 'Got Moondancer\'s key'),
+	]))
+})
