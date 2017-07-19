@@ -1035,3 +1035,15 @@ test('index(...).getKey(value) should not update when an object with a different
 		value => t.fail(`Unexpected value: ${JSON.stringify(value)}`),
 	]))
 })
+
+test('index(...).getKey(value) should return first element with index matching value for non-unique indexes', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithIndex([
+		{ name: 'Moondancer', type: 'unicorn' },
+		{ name: 'Minuette', type: 'unicorn' },
+	]))(xs.never())
+	driver.store('ponies').index('name').getKey('Moondancer').addListener(sequenceListener(t)([
+		value => t.deepEqual(value, 1, 'Got Moondancer\'s key'),
+	]))
+})
