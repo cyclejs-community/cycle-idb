@@ -205,4 +205,5 @@ These listeners will also catch the errors raised by writing operations that aff
   - [x] ~~getKey~~
   - [x] ~~getAllKeys~~
   - [x] ~~count~~
-- [ ] Support for cursors
+- [ ] Support cursors
+- [ ] Support IDBKeyRange
