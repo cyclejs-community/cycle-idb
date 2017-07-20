@@ -67,7 +67,7 @@ function main(sources) {
 
 ### Update data
 
-The cycle-idb driver receives a stream that accepts three database operations: `put`, `update` and `delete`. Factories for these operations can be imported from the `cycle-idb` package.
+The cycle-idb driver receives a stream that accepts a few database operations: `add`, `put`, `update`, `delete` and `clear`. Factories for these operations can be imported from the `cycle-idb` package.
 
 - `add`: adds an object to the store. If an object with the same primary key already exists, the operation will fail and send an error.
 - `put`: adds an object to the store, replacing it if an object with the same primary key already exists.
@@ -170,7 +170,7 @@ function main(sources) {
 }
 ```
 
-Unfortunately, the exposed `error$` doesn't broadcast errors occurred during reading operations, as the error thrown when querying a store object that doesn't exist.
+Unfortunately, the exposed `error$` doesn't broadcast errors occurred during reading operations, like the error thrown when querying a store object that doesn't exist.
 
 To catch these errors, you need to add an error listener to the streams returned by the methods `get()`, `getAll()` and `count()` returned by `IDB.store(...)`.
 
