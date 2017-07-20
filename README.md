@@ -1,5 +1,5 @@
 # cycle-idb
-A [cyclejs](https://github.com/cyclejs/cyclejs) driver for IndexedDB. It uses [idb](https://github.com/jakearchibald/idb) to interface with IndexedDB. If you need more details about how to work with IndexedDB, the [Google Developers Guide](https://developers.google.com/web/ilt/pwa/working-with-indexeddb) is a good place to start.
+A [cyclejs](https://github.com/cyclejs/cyclejs) driver for IndexedDB. It uses [idb](https://github.com/jakearchibald/idb) to interface with IndexedDB. If you need more details about how to work with IndexedDB, the [Google Developers Guide](https://developers.google.com/web/ilt/pwa/working-with-indexeddb) is a good place to start. If you are looking for more resources for cyclejs, check out [awesome-cyclejs](https://github.com/cyclejs-community/awesome-cyclejs).
 
 **Warning:** this library is in early development and it doesn't cover (yet) all the features available in IndexedDB (check [Planned features](#planned-features)). Any feedback, feature requests, bug reports or contributions are welcome, but should you decide to use cycle-idb in a production project, please be aware that you might find some issues.
 
