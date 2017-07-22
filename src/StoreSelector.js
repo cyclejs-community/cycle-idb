@@ -16,6 +16,7 @@ export default function StoreSelector(dbPromise, result$$, storeName) {
 		getAllKeys: SingleKeyCache(() => GetAllKeysSelector(dbPromise, result$, storeName)),
 		count: SingleKeyCache(() => CountSelector(dbPromise, result$, storeName)),
 		index: MultiKeyCache(indexName => IndexSelector(dbPromise, result$, storeName, indexName)),
+		cursor: MultiKeyCache(category => CursorSelector(result$, category))
 	}
 }
 
@@ -150,4 +151,11 @@ function promiseToStream(p) {
 		complete: () => {},
 	})
 	return $
+}
+
+const CursorSelector = (result$, category) => {
+	const dbResult$ = result$
+		.filter(({ result }) => result.category === category)
+		.map(({ result }) => result.data)
+	return adapt(dbResult$)
 }
