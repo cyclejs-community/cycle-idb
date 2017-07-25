@@ -4,7 +4,6 @@ import xs from 'xstream'
 import fromDiagram from 'xstream/extra/fromDiagram'
 
 import { 
-	mockIdb,
 	mockDatabase,
 	mockDbWithIndex,
 } from './idb-driver.mock'
@@ -16,16 +15,11 @@ import {
 } from './test'
 
 import makeIdbDriver, {
-	$add,
-	$delete,
-	$put,
-	$update,
-	$clear,
 	$cursor,
 } from '../idb-driver'
 
 
-test('Cursor should filter stuff', t => {
+test('Cursor should send the ponies that fulfill filtering criteria', t => {
 	t.plan(1)
 
 	const driver = makeIdbDriver(getTestId(), 1, mockDatabase([
