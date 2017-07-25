@@ -107,6 +107,8 @@ const WriteOperation = (dbPromise, operation, merge=false) => async (store, data
 		key: result || data, // $delete returns 'undefined', but then the key is in 'data'
 		indexes: modifiedIndexes,
 		operation: operation === 'delete' ? 'deleted' : (old === undefined ? 'inserted' : 'modified'),
+		oldValue: old,
+		newValue: operation !== 'delete' ? updatedData : undefined,
 	}
 }
 
