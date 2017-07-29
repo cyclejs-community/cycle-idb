@@ -18,7 +18,6 @@ export default function makeIdbDriver(name, version, upgrade) {
 		$update: WriteOperation(dbPromise, 'put', true),
 		$add: WriteOperation(dbPromise, 'add'),
 		$clear: ClearOperation(dbPromise),
-		$cursor: CursorOperation(dbPromise),
 	}
 
 	return function idbDriver(write$) {
@@ -50,10 +49,6 @@ export function $add(store, data) {
 
 export function $clear(store) {
 	return { store, operation: '$clear' }
-}
-
-export function $cursor(store, { category, filter }) {
-	return { store, data: { category, filter }, operation: '$cursor' }
 }
 
 function updatedIndexes(storeObj, old, data) {
@@ -110,31 +105,6 @@ const WriteOperation = (dbPromise, operation, merge=false) => async (store, data
 		oldValue: old,
 		newValue: operation !== 'delete' ? updatedData : undefined,
 	}
-}
-
-const CursorOperation = dbPromise => async (store, { category, filter }) => {
-	const db = await dbPromise
-	const cursor = await db.transaction(store)
-		.objectStore(store)
-		.openCursor()
-	const result = await executeCursor(cursor, filter)
-
-	return {
-		data: result,
-		indexes: {},
-		category,
-	}
-}
-
-async function executeCursor(cursor, filter) {
-	const result = []
-	while (cursor) {
-		if (filter(cursor.value)) {
-			result.push(cursor.value)
-		}
-		cursor = await cursor.continue()
-	}
-	return result
 }
 
 function executeDbUpdate({ dbOperation, operation, store, data }) {
