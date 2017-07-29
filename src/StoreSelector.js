@@ -13,7 +13,7 @@ export default function StoreSelector(dbPromise, result$$, storeName) {
 	return {
 		get: MultiKeyCache(key => GetSelector(dbPromise, result$, storeName, key), hashKey),
 		getAll: MultiKeyCache(key => GetAllSelector(dbPromise, result$, storeName, key), hashKey),
-		getAllKeys: SingleKeyCache(() => GetAllKeysSelector(dbPromise, result$, storeName), hashKey),
+		getAllKeys: MultiKeyCache(key => GetAllKeysSelector(dbPromise, result$, storeName, key), hashKey),
 		count: MultiKeyCache(key => CountSelector(dbPromise, result$, storeName, key), hashKey),
 		index: MultiKeyCache(indexName => IndexSelector(dbPromise, result$, storeName, indexName)),
 		query: MultiKeyCache(filter => QuerySelector(dbPromise, result$, filter, storeName)),
@@ -88,6 +88,15 @@ const any = (...fns) => value => {
 	return false
 }
 
+const and = (...fns) => value => {
+	for (let fn of fns) {
+		if(!fn(value)) {
+			return false
+		}
+	}
+	return true
+}
+
 const resultIsInsertedOrDeleted = ({ result }) =>
 	result.operation === 'inserted' || result.operation === 'deleted'
 
@@ -130,9 +139,14 @@ const CountSelector = (dbPromise, result$, storeName, key) => {
 	return adapt(dbResult$)
 }
 
-const GetAllKeysSelector = (dbPromise, result$, storeName) => {
-	const readFromDb = ReadFromDb('getAllKeys', { dbPromise, storeName })
-	const dbResult$$ = result$.filter(any(resultIsInsertedOrDeleted, resultIsCleared))
+const GetAllKeysSelector = (dbPromise, result$, storeName, key) => {
+	const readFromDb = ReadFromDb('getAllKeys', { dbPromise, storeName, key })
+	const dbResult$$ = result$
+		.filter(any(
+			resultIsCleared,
+			and(keyIsUndefined(key), resultIsInsertedOrDeleted),
+			and(resultIsInKey(key), resultIsInsertedOrDeleted),
+		))
 		.startWith(1)
 		.map(readFromDb)
 		.map(promiseToStream)
