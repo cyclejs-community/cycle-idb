@@ -1,7 +1,9 @@
 for folder in `ls examples`; do
 	echo "Building $folder..."
 	cd examples/$folder
-	npm link cycle-idb ../../
+	if [ $1 = "link" ]; then
+		npm link cycle-idb ../../
+	fi
 	npm run browserify
 	cd ../../
 done
