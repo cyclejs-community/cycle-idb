@@ -16,6 +16,7 @@ export default function StoreSelector(dbPromise, result$$, storeName) {
 		getAllKeys: SingleKeyCache(() => GetAllKeysSelector(dbPromise, result$, storeName)),
 		count: SingleKeyCache(() => CountSelector(dbPromise, result$, storeName)),
 		index: MultiKeyCache(indexName => IndexSelector(dbPromise, result$, storeName, indexName)),
+		query: MultiKeyCache(filter => QuerySelector(dbPromise, result$, filter, storeName)),
 	}
 }
 
@@ -127,6 +128,18 @@ const GetAllKeysSelector = (dbPromise, result$, storeName) => {
 	return adapt(dbResult$)
 }
 
+const QuerySelector = (dbPromise, result$, filter, storeName) => {
+	const readFromDb = ReadFromDbCursor({ dbPromise, filter, storeName })
+	const dbResult$$ = result$
+		.filter(any(resultIsCleared, ({ result: { oldValue, newValue }}) => 
+			(oldValue && filter(oldValue)) || (newValue && filter(newValue))))
+		.startWith(1)
+		.map(readFromDb)
+		.map(promiseToStream)
+	const dbResult$ = flattenConcurrently(dbResult$$)
+	return adapt(dbResult$)
+}
+
 const ReadFromDb = (operation, { dbPromise, storeName, key }) => async () => {
 	const db = await dbPromise
 	const data = await db.transaction(storeName)
@@ -140,6 +153,21 @@ const ReadFromDbIndex = (operation, { dbPromise, storeName, indexName, key}) => 
 		.objectStore(storeName)
 		.index(indexName)[operation](key)
 	return data
+}
+
+const ReadFromDbCursor = ({ filter, storeName, dbPromise }) => async () => {
+	const db = await dbPromise
+	let cursor = await db.transaction(storeName)
+		.objectStore(storeName)
+		.openCursor()
+	const result = []
+	while (cursor) {
+		if (filter(cursor.value)) {
+			result.push(cursor.value)
+		}
+		cursor = await cursor.continue()
+	}
+	return result
 }
 
 function promiseToStream(p) {

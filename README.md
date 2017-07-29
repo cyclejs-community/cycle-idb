@@ -65,6 +65,17 @@ function main(sources) {
 }
 ```
 
+#### Custom queries
+
+Cycle-idb allows to query based on a filtering function for use cases that cannot be covered with the provided selectors or indexes. The selector `query` is exposed for that purpose. The selector `query` returns a stream that will send an event with the objects in the store that fulfill the filtering function, and will send additional events every time an object that fulfills the filtering function is added, removed or modified.
+
+```javascript
+function main(sources) {
+    const tPonies$ = sources.IDB.store('ponies')
+        .query(pony => pony.name.indexOf('t') !== -1)
+}
+```
+
 ### Update data
 
 The cycle-idb driver receives a stream that accepts a few database operations: `add`, `put`, `update`, `delete` and `clear`. Factories for these operations can be imported from the `cycle-idb` package.
