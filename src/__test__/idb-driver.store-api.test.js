@@ -540,3 +540,92 @@ test('store(...).getAll(key) when key is IDBKeyRange object should not update wh
 			value => t.fail(`Unexpected value: ${JSON.stringify(value)}`),
 		]))
 })
+
+test('store(...).count(key) when key is IDBKeyRange object should work', t => {
+	t.plan(4)
+	
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase([
+		{ name: 'Twilight Sparkle' },
+		{ name: 'Fluttershy' },
+		{ name: 'Rainbow Dash' },
+	]))(fromDiagram('-a-b-c-d-|', {
+		values: {
+			a: $add('ponies', { name: 'Rarity' }),
+			b: $delete('ponies', 'Rainbow Dash'),
+			c: $update('ponies', { name: 'Rarity', type: 'unicorn' }),
+			d: $clear('ponies'),
+		},
+		timeUnit: 20,
+	}))
+	driver.store('ponies').count(IDBKeyRange.bound('G', 'T'))
+		.addListener(sequenceListener(t)([
+			value => t.deepEqual(value, 1, 'Gets matching objects in the store'),
+			value => t.deepEqual(value, 2, 'Gets objects with matching key added'),
+			value => t.deepEqual(value, 1, 'Gets objects with matching key deleted'),
+			value => t.deepEqual(value, 0, 'Store is cleared'),
+		]))
+})
+
+test('store(...).count(key) when key is IDBKeyRange object should not update when element included in key is modified', t => {
+	t.plan(1)
+	
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase([
+		{ name: 'Twilight Sparkle' },
+		{ name: 'Fluttershy' },
+	]))(xs.of(
+		$update('ponies', { name: 'Fluttershy', type: 'pegasus' })
+	))
+	driver.store('ponies').count(IDBKeyRange.lowerBound('B'))
+		.addListener(sequenceListener(t)([
+			value => t.deepEqual(value, 2, 'Fluttershy and Twilight matche the key'),
+			value => t.fail(`Unexpected value: ${JSON.stringify(value)}`),
+		]))
+})
+
+test('store(...).count(key) when key is IDBKeyRange object should not update when element not included in key is modified', t => {
+	t.plan(1)
+	
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase([
+		{ name: 'Twilight Sparkle' },
+		{ name: 'Fluttershy' },
+	]))(xs.of(
+		$update('ponies', { name: 'Fluttershy', type: 'pegasus' })
+	))
+	driver.store('ponies').count(IDBKeyRange.lowerBound('G'))
+		.addListener(sequenceListener(t)([
+			value => t.deepEqual(value, 1, 'Twilight matches the key'),
+			value => t.fail(`Unexpected value: ${JSON.stringify(value)}`),
+		]))
+})
+
+test('store(...).count(key) when key is IDBKeyRange object should not update when element not included in key is added', t => {
+	t.plan(1)
+	
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase([
+		{ name: 'Twilight Sparkle' },
+		{ name: 'Fluttershy' },
+	]))(xs.of(
+		$add('ponies', { name: 'Applejack' })
+	))
+	driver.store('ponies').count(IDBKeyRange.lowerBound('G'))
+		.addListener(sequenceListener(t)([
+			value => t.deepEqual(value, 1, 'Twilight matches the key'),
+			value => t.fail(`Unexpected value: ${JSON.stringify(value)}`),
+		]))
+})
+
+test('store(...).count(key) when key is IDBKeyRange object should not update when element not included in key is removed', t => {
+	t.plan(1)
+	
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase([
+		{ name: 'Twilight Sparkle' },
+		{ name: 'Fluttershy' },
+	]))(xs.of(
+		$delete('ponies', 'Fluttershy')
+	))
+	driver.store('ponies').count(IDBKeyRange.lowerBound('G'))
+		.addListener(sequenceListener(t)([
+			value => t.deepEqual(value, 1, 'Twilight matches the key'),
+			value => t.fail(`Unexpected value: ${JSON.stringify(value)}`),
+		]))
+})

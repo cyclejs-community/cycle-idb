@@ -14,7 +14,7 @@ export default function StoreSelector(dbPromise, result$$, storeName) {
 		get: MultiKeyCache(key => GetSelector(dbPromise, result$, storeName, key), hashKey),
 		getAll: MultiKeyCache(key => GetAllSelector(dbPromise, result$, storeName, key), hashKey),
 		getAllKeys: SingleKeyCache(() => GetAllKeysSelector(dbPromise, result$, storeName), hashKey),
-		count: SingleKeyCache(() => CountSelector(dbPromise, result$, storeName), hashKey),
+		count: MultiKeyCache(key => CountSelector(dbPromise, result$, storeName, key), hashKey),
 		index: MultiKeyCache(indexName => IndexSelector(dbPromise, result$, storeName, indexName)),
 		query: MultiKeyCache(filter => QuerySelector(dbPromise, result$, filter, storeName)),
 	}
@@ -119,9 +119,11 @@ const GetAllSelector = (dbPromise, result$, storeName, key) => {
 	return adapt(dbResult$)
 }
 
-const CountSelector = (dbPromise, result$, storeName) => {
-	const readFromDb = ReadFromDb('count', { dbPromise, storeName })
-	const dbResult$$ = result$.startWith(1)
+const CountSelector = (dbPromise, result$, storeName, key) => {
+	const readFromDb = ReadFromDb('count', { dbPromise, storeName, key })
+	const dbResult$$ = result$
+		.filter(any(keyIsUndefined(key), resultIsCleared, resultIsInKey(key)))
+		.startWith(1)
 		.map(readFromDb)
 		.map(promiseToStream)
 	const dbResult$ = flattenConcurrently(dbResult$$).compose(dropRepeats())
