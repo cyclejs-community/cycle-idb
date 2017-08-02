@@ -22,17 +22,19 @@ function main(sources) {
 	const clearPonies$ = sources.DOM.select('.clear').events('click')
 		.map(x => $clear('ponies'))
 	const updateDb$ = xs.merge(addPonies$, clearPonies$)
+
+	const ponies$ = sources.IDB.store('ponies')
+		.bound('F', 'T')
+		.getAll()
 	
-	const poniesWithT$ = sources.IDB.store('ponies')
-		.query(pony => pony.name.indexOf('t') !== -1)
-	const poniesWithTvtree$ = poniesWithT$
+	const poniesVtree$ = ponies$
 		.map(ponies => ul(
 			ponies.map(pony => li(pony.name))
 		))
 	
-	const vtree$ = poniesWithTvtree$
+	const vtree$ = poniesVtree$
 		.map(poniesVtree => div([
-			h4('Ponies with \'T\''),
+			h4('Ponies between \'F\' and \'T\''),
 			poniesVtree,
 			button('.clear', 'Clear'),
 		]))

@@ -24,6 +24,7 @@ import makeIdbDriver, {
 	$delete,
 	$put,
 	$update,
+	$clear,
 } from '../idb-driver'
 
 
@@ -356,4 +357,13 @@ test('store(...).getAllKeys() should get an update when an object is added to th
 			value => t.deepEqual(value, [], 'Database is empty'),
 			value => t.deepEqual(value, [ 'Fluttershy' ], 'Fluttershy is added'),
 		]))
+})
+
+test('successive calls to store(...).get(key) with the same key should return the same stream', t => {
+	t.plan(1)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase())(xs.never())
+	const get$_1 = driver.store('ponies').get('Twilight Sparkle')
+	const get$_2 = driver.store('ponies').get('Twilight Sparkle')
+	t.equal(get$_1, get$_2)
 })

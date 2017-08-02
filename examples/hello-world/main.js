@@ -9,7 +9,7 @@ import makeIdbDriver, { $put } from 'cycle-idb'
 const PONIES = [
 	{ name: 'Pinkie Pie', type: 'earth pony' },
 	{ name: 'Applejack', type: 'earth pony' },
-	{ name: 'Rainbow Dasy', type: 'pegasus' },
+	{ name: 'Rainbow Dash', type: 'pegasus' },
 	{ name: 'Rarity', type: 'unicorn' },
 	{ name: 'Fluttershy', type: 'pegasus' },
 ]

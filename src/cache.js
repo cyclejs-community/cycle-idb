@@ -8,12 +8,13 @@ export function SingleKeyCache(factory) {
 	}
 }
 
-export function MultiKeyCache(factory) {
+export function MultiKeyCache(factory, hashFn) {
 	const cache = {}
 	return key => {
-		if (!cache[key]) {
-			cache[key] = factory(key)
+		const hashKey = hashFn ? hashFn(key) : key
+		if (!cache[hashKey]) {
+			cache[hashKey] = factory(key)
 		}
-		return cache[key]
+		return cache[hashKey]
 	}
 }
