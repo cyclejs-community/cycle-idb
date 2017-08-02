@@ -76,6 +76,28 @@ function main(sources) {
 }
 ```
 
+#### Key ranges
+
+Cycle-idb provides a fluent api to use key ranges. For more information on IndexedDB key ranges, check [IDBKeyRange](https://developer.mozilla.org/en-US/docs/Web/API/IDBKeyRange).
+
+The object returned by the `store` selector contains four selectors that map to the factories for IDBKeyRange:
+- `only`: accepts one parameter. Will return selectors for data matching the given key
+- `bound`: accepts a `lower` and `upper`parameters. Will return selectors for data where the key is within these limits.
+- `lowerBound`: accepts a `lower` parameter. Will return selectors for data where the key is higher than the given limit.
+- `upperBound`: accepts an `upper` parameter. Will return selectors for data where the key is lower than the given limit.
+All this selectors, return an object with the selectors `get`, `getAll`, `getAllKeys` and `count`.
+
+```javascript
+function main(sources) {
+    const ponyStore = sources.IDB.store('ponies')
+
+    const twilight$ = ponyStore.only('Twilight Sparkle').get()
+    const firstPonies$ = ponyStore.upperBound('R').getAll()
+    const lastPoniesKeys$ = ponyStore.lowerBound('R').getAllKeys()
+    const poniesFSCount$ = ponyStore.bound('F', 'S').count()
+}
+```
+
 ### Update data
 
 The cycle-idb driver receives a stream that accepts a few database operations: `add`, `put`, `update`, `delete` and `clear`. Factories for these operations can be imported from the `cycle-idb` package.
