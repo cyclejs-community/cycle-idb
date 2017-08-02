@@ -9,7 +9,7 @@ import makeIdbDriver, { $put, $clear } from 'cycle-idb'
 const PONIES = [
 	{ name: 'Twilight Sparkle', type: 'unicorn' },
 	{ name: 'Pinkie Pie', type: 'earth pony' },
-	{ name: 'Rainbow Dasy', type: 'pegasus' },
+	{ name: 'Rainbow Dash', type: 'pegasus' },
 	{ name: 'Applejack', type: 'earth pony' },
 	{ name: 'Rarity', type: 'unicorn' },
 	{ name: 'Fluttershy', type: 'pegasus' },
@@ -24,7 +24,8 @@ function main(sources) {
 	const updateDb$ = xs.merge(addPonies$, clearPonies$)
 
 	const ponies$ = sources.IDB.store('ponies')
-		.getAll(IDBKeyRange.bound('F', 'T'))
+		.bound('F', 'T')
+		.getAll()
 	
 	const poniesVtree$ = ponies$
 		.map(ponies => ul(
