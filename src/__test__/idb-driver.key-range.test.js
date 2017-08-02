@@ -355,3 +355,115 @@ testSelector('store(...).bound(A, R).count()', { test,
 		]
 	}]
 })
+
+testSelector('store(...).lowerBound(R).getAll()', { test,
+	getStream: store => store.lowerBound('R').getAll(),
+	cases: [{
+		description: 'should get ponies within range',
+		initialData: everypony,
+		output: [
+			[[rainbow, rarity, twilight], 'Ponies from R found'],
+		]
+	}, {
+		description: 'should update when pony within range is added',
+		initialData: [fluttershy, pinkie, rainbow, twilight],
+		input$: xs.of($add('ponies', rarity)),
+		output: [
+			[[rainbow, twilight], 'Rainbow and Twilight found'],
+			[[rainbow, rarity, twilight], 'Rarity is added'],
+		]
+	}, {
+		description: 'should update when pony within range is modified',
+		initialData: everypony,
+		input$: xs.of($update('ponies', { name: 'Rainbow Dash', element: 'loyalty' })),
+		output: [
+			[[rainbow, rarity, twilight], 'Rainbow, Rarity and Twilight found'],
+			[[{ name: 'Rainbow Dash', type: 'pegasus', element: 'loyalty'}, rarity, twilight], 'Rainbow is updated'],
+		]
+	}, {
+		description: 'should update when pony within range is removed',
+		initialData: everypony,
+		input$: xs.of($delete('ponies', 'Twilight Sparkle')),
+		output: [
+			[[rainbow, rarity, twilight], 'Rainbow, Rarity and Twilight found'],
+			[[rainbow, rarity], 'Twilight is removed'],
+		]
+	}, {
+		description: 'should not update when pony outside range is added',
+		initialData: [applejack, pinkie, rainbow, rarity, twilight],
+		input$: xs.of($add('ponies', fluttershy)),
+		output: [
+			[[rainbow, rarity, twilight], 'Rainbow, Rarity and Twilight found'],
+		]
+	}, {
+		description: 'should not update when pony outside range is modified',
+		initialData: everypony,
+		input$: xs.of($update('ponies', Object.assign({}, fluttershy, { element: 'kindness' }))),
+		output: [
+			[[rainbow, rarity, twilight], 'Rainbow, Rarity and Twilight found'],
+		]
+	}, {
+		description: 'should not update when pony outside range is deleted',
+		initialData: everypony,
+		input$: xs.of($delete('ponies', 'Applejack')),
+		output: [
+			[[rainbow, rarity, twilight], 'Rainbow, Rarity and Twilight found'],
+		]
+	}]
+})
+
+testSelector('store(...).upperBound(R).getAll()', { test,
+	getStream: store => store.upperBound('R').getAll(),
+	cases: [{
+		description: 'should get ponies within range',
+		initialData: everypony,
+		output: [
+			[[applejack, fluttershy, pinkie], 'Ponies from A to R found'],
+		]
+	}, {
+		description: 'should update when pony within range is added',
+		initialData: [fluttershy, pinkie, rainbow, rarity, twilight],
+		input$: xs.of($add('ponies', applejack)),
+		output: [
+			[[fluttershy, pinkie], 'Fluttershy and Pinkie found'],
+			[[applejack, fluttershy, pinkie], 'Applejack is added'],
+		]
+	}, {
+		description: 'should update when pony within range is modified',
+		initialData: everypony,
+		input$: xs.of($update('ponies', { name: 'Applejack', element: 'honesty' })),
+		output: [
+			[[applejack, fluttershy, pinkie], 'Applejack, Fluttershy and Pinkie found'],
+			[[{ name: 'Applejack', type: 'earth pony', element: 'honesty'}, fluttershy, pinkie], 'Applejack is updated'],
+		]
+	}, {
+		description: 'should update when pony within range is removed',
+		initialData: everypony,
+		input$: xs.of($delete('ponies', 'Applejack')),
+		output: [
+			[[applejack, fluttershy, pinkie], 'Applejack, Fluttershy and Pinkie found'],
+			[[fluttershy, pinkie], 'Applejack is removed'],
+		]
+	}, {
+		description: 'should not update when pony outside range is added',
+		initialData: [applejack, fluttershy, pinkie, rainbow, rarity],
+		input$: xs.of($add('ponies', twilight)),
+		output: [
+			[[applejack, fluttershy, pinkie], 'Applejack, Fluttershy and Pinkie found'],
+		]
+	}, {
+		description: 'should not update when pony outside range is modified',
+		initialData: everypony,
+		input$: xs.of($update('ponies', Object.assign({}, rainbow, { element: 'loyalty' }))),
+		output: [
+			[[applejack, fluttershy, pinkie], 'Applejack, Fluttershy and Pinkie found'],
+		]
+	}, {
+		description: 'should not update when pony outside range is deleted',
+		initialData: everypony,
+		input$: xs.of($delete('ponies', 'Rarity')),
+		output: [
+			[[applejack, fluttershy, pinkie], 'Applejack, Fluttershy and Pinkie found'],
+		]
+	}]
+})

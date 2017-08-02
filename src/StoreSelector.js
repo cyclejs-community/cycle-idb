@@ -23,6 +23,8 @@ export default function StoreSelector(dbPromise, result$$, storeName) {
 		only: key => keyCache(IDBKeyRange.only(key)),
 		bound: (lower, upper, lowerOpen=false, upperOpen=false) =>
 			keyCache(IDBKeyRange.bound(lower, upper, lowerOpen, upperOpen)),
+		lowerBound: (lower, lowerOpen=false) => keyCache(IDBKeyRange.lowerBound(lower, lowerOpen)),
+		upperBound: (upper, upperOpen=false) => keyCache(IDBKeyRange.upperBound(upper, upperOpen)),
 	}
 }
 
