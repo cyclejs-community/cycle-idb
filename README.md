@@ -246,3 +246,4 @@ These listeners will also catch the errors raised by writing operations that aff
 - [ ] Support IDBKeyRange
   - [x] ~~Key ranges in store selector~~
   - [ ] Key ranges in index selector
+
