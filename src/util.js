@@ -19,11 +19,3 @@ export const and = (...fns) => value => {
 }
 
 export const pipe = (...fns) => data => fns.reduce((acc, fn) => fn(acc), data)
-/*
-export const pipe = (...fns) => data => {
-	for (let fn of fns) {
-		data = fn(data)
-	}
-	return data
-}
-*/
