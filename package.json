@@ -6,7 +6,7 @@
   "scripts": {
     "prelib": "rm -rf lib/*",
     "lib": "babel src --out-dir lib --ignore test.js,mock.js",
-    "test": "NODE_PATH=src tape -r babel-register 'src/**/*.test.js' | ./node_modules/.bin/tap-diff",
+    "test": "NODE_PATH=src tape -r babel-register 'src/**/*.test.js' | tap-diff",
     "prepare": "npm test && npm run lib",
     "examples": ".scripts/run-examples.sh",
     "examples:link": ".scripts/run-examples.sh link"
