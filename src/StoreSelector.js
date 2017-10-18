@@ -15,9 +15,9 @@ export default function StoreSelector(dbPromise, result$$, storeName) {
 
 	return {
 		get: key => keyCache(IDBKeyRange.only(key)).get(),
-		getAll: MultiKeyCache(() => GetAllSelector(dbPromise, result$, storeName)),
-		getAllKeys: MultiKeyCache(() => GetAllKeysSelector(dbPromise, result$, storeName)),
-		count: MultiKeyCache(() => CountSelector(dbPromise, result$, storeName)),
+		getAll: SingleKeyCache(() => GetAllSelector(dbPromise, result$, storeName)),
+		getAllKeys: SingleKeyCache(() => GetAllKeysSelector(dbPromise, result$, storeName)),
+		count: SingleKeyCache(() => CountSelector(dbPromise, result$, storeName)),
 		index: MultiKeyCache(indexName => IndexSelector(dbPromise, result$, storeName, indexName)),
 		query: MultiKeyCache(filter => QuerySelector(dbPromise, result$, filter, storeName)),
 		only: key => keyCache(IDBKeyRange.only(key)),
@@ -30,10 +30,10 @@ export default function StoreSelector(dbPromise, result$$, storeName) {
 
 function KeyRangeSelector(dbPromise, result$, storeName, keyRange) {
 	return {
-		get: MultiKeyCache(() => GetSelector(dbPromise, result$, storeName, keyRange), hashKey),
-		getAll: MultiKeyCache(() => GetAllSelector(dbPromise, result$, storeName, keyRange), hashKey),
-		getAllKeys: MultiKeyCache(() => GetAllKeysSelector(dbPromise, result$, storeName, keyRange), hashKey),
-		count: MultiKeyCache(() => CountSelector(dbPromise, result$, storeName, keyRange), hashKey),
+		get: SingleKeyCache(() => GetSelector(dbPromise, result$, storeName, keyRange), hashKey),
+		getAll: SingleKeyCache(() => GetAllSelector(dbPromise, result$, storeName, keyRange), hashKey),
+		getAllKeys: SingleKeyCache(() => GetAllKeysSelector(dbPromise, result$, storeName, keyRange), hashKey),
+		count: SingleKeyCache(() => CountSelector(dbPromise, result$, storeName, keyRange), hashKey),
 	}
 }
 
