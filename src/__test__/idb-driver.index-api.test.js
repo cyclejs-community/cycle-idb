@@ -16,6 +16,7 @@ import idb from 'idb'
 import {
 	getTestId,
 	sequenceListener,
+	range,
 } from './test'
 
 import makeIdbDriver, {
@@ -1047,3 +1048,24 @@ test('index(...).getKey(value) should return first element with index matching v
 		value => t.deepEqual(value, 1, 'Got Moondancer\'s key'),
 	]))
 })
+
+const methods = [
+	'get',
+	'getAll',
+	'getAllKeys',
+	'getKey',
+	'count',
+]
+methods.forEach(method => test(`when index(...).${method} is invoked multiple times, it should send data each time`, t => {
+	t.plan(5)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDbWithIndex([
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+	]))(xs.never())
+
+	xs.merge.apply(null,
+		range(0, 5).map(() => driver.store('ponies').index('name')[method]('Twilight Sparkle')))
+		.addListener(sequenceListener(t)(range(1, 6).map(x => 
+			value => t.pass(`Value received ${x} times`)
+		)))
+}))

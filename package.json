@@ -30,7 +30,7 @@
   "dependencies": {
     "@cycle/run": "^3.1.0",
     "idb": "^2.0.3",
-    "xstream": "^10.8.0"
+    "xstream": ">=10.8.0"
   },
   "devDependencies": {
     "babel-cli": "^6.24.1",

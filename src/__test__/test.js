@@ -17,3 +17,11 @@ export const sequenceListener = test => (listeners, errorHandler, bounded=true) 
 		error: errorHandler || (e => test.fail(e.message)),
 	}
 }
+
+export const range = (start, finish) => {
+	const result = []
+	for (let i=start; i<finish; i++) {
+		result.push(i)
+	}
+	return result
+}

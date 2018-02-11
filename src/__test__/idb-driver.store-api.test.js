@@ -17,6 +17,7 @@ import idb from 'idb'
 import {
 	getTestId,
 	sequenceListener,
+	range,
 } from './test'
 
 import makeIdbDriver, {
@@ -359,7 +360,7 @@ test('store(...).getAllKeys() should get an update when an object is added to th
 		]))
 })
 
-test('successive calls to store(...).get(key) with the same key should return the same stream', t => {
+test.skip('successive calls to store(...).get(key) with the same key should return the same stream', t => {
 	t.plan(1)
 
 	const driver = makeIdbDriver(getTestId(), 1, mockDatabase())(xs.never())
@@ -367,3 +368,75 @@ test('successive calls to store(...).get(key) with the same key should return th
 	const get$_2 = driver.store('ponies').get('Twilight Sparkle')
 	t.equal(get$_1, get$_2)
 })
+
+test('when a selector is invoked multiple times it should send the latest data each time', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase([
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+	]))(xs.never())
+
+	xs.periodic(100).take(2)
+		.map(() => driver.store('ponies').get('Twilight Sparkle'))
+		.flatten()
+		.addListener(sequenceListener(t)([
+			value => t.deepEqual(value, { name: 'Twilight Sparkle', type: 'unicorn' }),
+			value => t.deepEqual(value, { name: 'Twilight Sparkle', type: 'unicorn' }),
+		]))
+})
+
+test('when a selector is invoked multiple times it should send the latest data each time', t => {
+	t.plan(3)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase([
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+	]))(xs.never())
+
+	xs.merge(
+		driver.store('ponies').get('Twilight Sparkle'),
+		driver.store('ponies').get('Twilight Sparkle'),
+		driver.store('ponies').get('Twilight Sparkle'),
+	).addListener(sequenceListener(t)([
+		value => t.deepEqual(value, { name: 'Twilight Sparkle', type: 'unicorn' }),
+		value => t.deepEqual(value, { name: 'Twilight Sparkle', type: 'unicorn' }),
+		value => t.deepEqual(value, { name: 'Twilight Sparkle', type: 'unicorn' }),
+	]))
+})
+
+test('when store(...).getAll() is invoked multiple times it should send the latest data each time', t => {
+	t.plan(2)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase([
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+	]))(xs.never())
+
+	xs.periodic(100).take(2)
+		.map(() => driver.store('ponies').getAll())
+		.flatten()
+		.addListener(sequenceListener(t)([
+			value => t.deepEqual(value, [{ name: 'Twilight Sparkle', type: 'unicorn' }]),
+			value => t.deepEqual(value, [{ name: 'Twilight Sparkle', type: 'unicorn' }]),
+		]))
+})
+
+const methods = [
+	'get',
+	'getAll',
+	'getAllKeys',
+	'count',
+]
+methods.forEach(method => test(`when store(...).${method} is invoked multiple times, it should send data each time`, t => {
+	t.plan(5)
+
+	const driver = makeIdbDriver(getTestId(), 1, mockDatabase([
+		{ name: 'Twilight Sparkle', type: 'unicorn' },
+	]))(xs.never())
+
+	xs.periodic(50).take(5)
+		.map(() => driver.store('ponies')[method]('Twilight Sparkle'))
+		.flatten()
+		.addListener(sequenceListener(t)(range(1, 6).map(x => 
+			value => t.pass(`Value received ${x} times`)
+		)))
+
+}))

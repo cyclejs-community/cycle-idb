@@ -15,6 +15,7 @@ export default function StoreSelector(dbPromise, result$$, storeName) {
 
 	return {
 		get: key => keyCache(IDBKeyRange.only(key)).get(),
+		//get: key => GetSelector(dbPromise, result$, storeName, IDBKeyRange.only(key)),
 		getAll: SingleKeyCache(() => GetAllSelector(dbPromise, result$, storeName)),
 		getAllKeys: SingleKeyCache(() => GetAllKeysSelector(dbPromise, result$, storeName)),
 		count: SingleKeyCache(() => CountSelector(dbPromise, result$, storeName)),
@@ -51,6 +52,7 @@ function IndexSelector(dbPromise, result$, storeName, indexName) {
 				.map(promiseToStream)
 			const dbResult$ = flattenConcurrently(dbResult$$)
 			return adapt(dbResult$)
+				.remember()
 		}),
 		getAll: MultiKeyCache(key => {
 			const readFromDb = ReadFromDb('getAll', { dbPromise, storeName, indexName, key })
@@ -60,6 +62,7 @@ function IndexSelector(dbPromise, result$, storeName, indexName) {
 				.map(promiseToStream)
 			const dbResult$ = flattenConcurrently(dbResult$$)
 			return adapt(dbResult$)
+				.remember()
 		}),
 		getAllKeys: MultiKeyCache(key => {
 			const readFromDb = ReadFromDb('getAllKeys', { dbPromise, storeName, indexName, key })
@@ -71,6 +74,7 @@ function IndexSelector(dbPromise, result$, storeName, indexName) {
 				.map(promiseToStream)
 			const dbResult$ = flattenConcurrently(dbResult$$)
 			return adapt(dbResult$)
+				.remember()
 		}),
 		getKey: MultiKeyCache(key => {
 			const readFromDb = ReadFromDb('getKey', { dbPromise, storeName, indexName, key })
@@ -81,6 +85,7 @@ function IndexSelector(dbPromise, result$, storeName, indexName) {
 				.map(promiseToStream)
 			const dbResult$ = flattenConcurrently(dbResult$$)
 			return adapt(dbResult$)
+				.remember()
 		}),
 		count: MultiKeyCache(key => {
 			const readFromDb = ReadFromDb('count', { dbPromise, storeName, indexName, key })
@@ -90,6 +95,7 @@ function IndexSelector(dbPromise, result$, storeName, indexName) {
 				.map(promiseToStream)
 			const dbResult$ = flattenConcurrently(dbResult$$).compose(dropRepeats())
 			return adapt(dbResult$)
+				.remember()
 		}),
 	}
 }
@@ -111,6 +117,7 @@ const GetSelector = (dbPromise, result$, storeName, key) => {
 		.map(promiseToStream)
 	const dbResult$ = flattenConcurrently(dbResult$$)
 	return adapt(dbResult$)
+		.remember()
 }
 
 const GetAllSelector = (dbPromise, result$, storeName, key) => {
@@ -122,6 +129,7 @@ const GetAllSelector = (dbPromise, result$, storeName, key) => {
 		.map(promiseToStream)
 	const dbResult$ = flattenConcurrently(dbResult$$)
 	return adapt(dbResult$)
+		.remember()
 }
 
 const CountSelector = (dbPromise, result$, storeName, key) => {
@@ -133,6 +141,7 @@ const CountSelector = (dbPromise, result$, storeName, key) => {
 		.map(promiseToStream)
 	const dbResult$ = flattenConcurrently(dbResult$$).compose(dropRepeats())
 	return adapt(dbResult$)
+		.remember()
 }
 
 const GetAllKeysSelector = (dbPromise, result$, storeName, key) => {
@@ -148,6 +157,7 @@ const GetAllKeysSelector = (dbPromise, result$, storeName, key) => {
 		.map(promiseToStream)
 	const dbResult$ = flattenConcurrently(dbResult$$)
 	return adapt(dbResult$)
+		.remember()
 }
 
 const QuerySelector = (dbPromise, result$, filter, storeName) => {
