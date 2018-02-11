@@ -5,7 +5,7 @@ import dropRepeats from 'xstream/extra/dropRepeats'
 import { adapt } from '@cycle/run/lib/adapt'
 
 import {
-	ReadFromDb,
+	//ReadFromDb,
 	hashKey,
 	keyIsUndefined,
 	promiseToStream,
@@ -15,65 +15,89 @@ import {
 
 import { MultiKeyCache } from './cache'
 
-import { any, xor } from './util'
+import { any, pipe, xor } from './util'
 
+
+const ReadFromDb = ({ dbPromise, storeName, indexName }) => (operation, key) => {
+	const read = pipe(
+		db => db.transaction(storeName).objectStore(storeName),
+		store => indexName ? store.index(indexName) : store,
+		store => store[operation].bind(store)
+	)
+	return async () => {
+		const db = await dbPromise
+		const data = await read(db)(key)
+		return data
+	}
+}
 
 export default function IndexSelector(dbPromise, result$, storeName, indexName) {
 	const filterByKey = key => ({ result }) => (key === undefined || result.indexes[indexName].oldValue === key || result.indexes[indexName].newValue === key)
+	const makeDbReader = ReadFromDb({ dbPromise, storeName, indexName })
 
 	return {
-		get: MultiKeyCache(key => {
-			const readFromDb = ReadFromDb('get', { dbPromise, storeName, indexName, key })
-			const dbResult$$ = result$.filter(any(resultIsCleared, filterByKey(key)))
-				.startWith(1)
-				.map(readFromDb)
-				.map(promiseToStream)
-			const dbResult$ = flattenConcurrently(dbResult$$)
-			return adapt(dbResult$)
-				.remember()
-		}),
-		getAll: MultiKeyCache(key => {
-			const readFromDb = ReadFromDb('getAll', { dbPromise, storeName, indexName, key })
-			const dbResult$$ = result$.filter(any(resultIsCleared, filterByKey(key)))
-				.startWith(1)
-				.map(readFromDb)
-				.map(promiseToStream)
-			const dbResult$ = flattenConcurrently(dbResult$$)
-			return adapt(dbResult$)
-				.remember()
-		}),
-		getAllKeys: MultiKeyCache(key => {
-			const readFromDb = ReadFromDb('getAllKeys', { dbPromise, storeName, indexName, key })
-			const dbResult$$ = result$.filter(any(resultIsCleared, filterByKey(key)))
-				.filter(any(resultIsCleared, ({ result }) => result.indexes.hasOwnProperty(indexName)))
-				.filter(any(resultIsCleared, ({ result }) => xor(result.indexes[indexName].oldValue !== key, result.indexes[indexName].newValue !== key)))
-				.startWith(1)
-				.map(readFromDb)
-				.map(promiseToStream)
-			const dbResult$ = flattenConcurrently(dbResult$$)
-			return adapt(dbResult$)
-				.remember()
-		}),
-		getKey: MultiKeyCache(key => {
-			const readFromDb = ReadFromDb('getKey', { dbPromise, storeName, indexName, key })
-			const dbResult$$ = result$.filter(any(resultIsCleared, filterByKey(key)))
-				.filter(any(resultIsCleared, resultIsInsertedOrDeleted))
-				.startWith(1)
-				.map(readFromDb)
-				.map(promiseToStream)
-			const dbResult$ = flattenConcurrently(dbResult$$)
-			return adapt(dbResult$)
-				.remember()
-		}),
-		count: MultiKeyCache(key => {
-			const readFromDb = ReadFromDb('count', { dbPromise, storeName, indexName, key })
-			const dbResult$$ = result$.filter(any(resultIsCleared, filterByKey(key)))
-				.startWith(1)
-				.map(readFromDb)
-				.map(promiseToStream)
-			const dbResult$ = flattenConcurrently(dbResult$$).compose(dropRepeats())
-			return adapt(dbResult$)
-				.remember()
-		}),
+		get: MultiKeyCache(key => GetSelector(result$, makeDbReader, filterByKey, key)),
+		getAll: MultiKeyCache(key => GetAllSelector(result$, makeDbReader, filterByKey, key)),
+		getAllKeys: MultiKeyCache(key => GetAllKeysSelector(result$, makeDbReader, filterByKey, indexName, key)),
+		getKey: MultiKeyCache(key => GetKeySelector(result$, makeDbReader, filterByKey, key)),
+		count: MultiKeyCache(key => CountSelector(result$, makeDbReader, filterByKey, key)),
 	}
+}
+
+function GetSelector(result$, makeDbReader, filterByKey, key) {
+	const readFromDb = makeDbReader('get', key)
+	const dbResult$$ = result$.filter(any(resultIsCleared, filterByKey(key)))
+		.startWith(1)
+		.map(readFromDb)
+		.map(promiseToStream)
+	const dbResult$ = flattenConcurrently(dbResult$$)
+	return adapt(dbResult$)
+		.remember()
+}
+
+function GetAllSelector(result$, makeDbReader, filterByKey, key) {
+	const readFromDb = makeDbReader('getAll', key)
+	const dbResult$$ = result$.filter(any(resultIsCleared, filterByKey(key)))
+		.startWith(1)
+		.map(readFromDb)
+		.map(promiseToStream)
+	const dbResult$ = flattenConcurrently(dbResult$$)
+	return adapt(dbResult$)
+		.remember()
+}
+
+function GetAllKeysSelector(result$, makeDbReader, filterByKey, indexName, key) {
+	const readFromDb = makeDbReader('getAllKeys', key)
+	const dbResult$$ = result$.filter(any(resultIsCleared, filterByKey(key)))
+		.filter(any(resultIsCleared, ({ result }) => result.indexes.hasOwnProperty(indexName)))
+		.filter(any(resultIsCleared, ({ result }) => xor(result.indexes[indexName].oldValue !== key, result.indexes[indexName].newValue !== key)))
+		.startWith(1)
+		.map(readFromDb)
+		.map(promiseToStream)
+	const dbResult$ = flattenConcurrently(dbResult$$)
+	return adapt(dbResult$)
+		.remember()
+}
+
+function GetKeySelector(result$, makeDbReader, filterByKey, key) {
+	const readFromDb = makeDbReader('getKey', key)
+	const dbResult$$ = result$.filter(any(resultIsCleared, filterByKey(key)))
+		.filter(any(resultIsCleared, resultIsInsertedOrDeleted))
+		.startWith(1)
+		.map(readFromDb)
+		.map(promiseToStream)
+	const dbResult$ = flattenConcurrently(dbResult$$)
+	return adapt(dbResult$)
+		.remember()
+}
+
+function CountSelector(result$, makeDbReader, filterByKey, key) {
+	const readFromDb = makeDbReader('count', key)
+	const dbResult$$ = result$.filter(any(resultIsCleared, filterByKey(key)))
+		.startWith(1)
+		.map(readFromDb)
+		.map(promiseToStream)
+	const dbResult$ = flattenConcurrently(dbResult$$).compose(dropRepeats())
+	return adapt(dbResult$)
+		.remember()
 }
