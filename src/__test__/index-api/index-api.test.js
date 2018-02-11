@@ -10,14 +10,14 @@ import {
 	mockDbWithTypeIndex,
 	mockDbWithNameIndex,
 	mockDbWithNumberIndex,
-} from './idb-driver.mock'
+} from 'idb-driver.mock'
 import idb from 'idb'
 
 import {
 	getTestId,
 	sequenceListener,
 	range,
-} from './test'
+} from 'test'
 
 import makeIdbDriver, {
 	$add,
@@ -25,7 +25,7 @@ import makeIdbDriver, {
 	$put,
 	$update,
 	$clear,
-} from '../idb-driver'
+} from 'idb-driver'
 
 
 test('index(...).getAll() should get all the elements sorted by index', t => {
