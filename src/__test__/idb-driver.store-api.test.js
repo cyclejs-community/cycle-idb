@@ -376,7 +376,7 @@ test('when a selector is invoked multiple times it should send the latest data e
 		{ name: 'Twilight Sparkle', type: 'unicorn' },
 	]))(xs.never())
 
-	xs.periodic(100).take(2)
+	xs.periodic(5).take(2)
 		.map(() => driver.store('ponies').get('Twilight Sparkle'))
 		.flatten()
 		.addListener(sequenceListener(t)([
@@ -410,7 +410,7 @@ test('when store(...).getAll() is invoked multiple times it should send the late
 		{ name: 'Twilight Sparkle', type: 'unicorn' },
 	]))(xs.never())
 
-	xs.periodic(100).take(2)
+	xs.periodic(5).take(2)
 		.map(() => driver.store('ponies').getAll())
 		.flatten()
 		.addListener(sequenceListener(t)([
@@ -432,7 +432,7 @@ methods.forEach(method => test(`when store(...).${method} is invoked multiple ti
 		{ name: 'Twilight Sparkle', type: 'unicorn' },
 	]))(xs.never())
 
-	xs.periodic(50).take(5)
+	xs.periodic(5).take(5)
 		.map(() => driver.store('ponies')[method]('Twilight Sparkle'))
 		.flatten()
 		.addListener(sequenceListener(t)(range(1, 6).map(x => 

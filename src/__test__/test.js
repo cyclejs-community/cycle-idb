@@ -14,7 +14,10 @@ export const sequenceListener = test => (listeners, errorHandler, bounded=true) 
 			listeners[current](value)
 			current++
 		},
-		error: errorHandler || (e => test.fail(e.message)),
+		error: errorHandler || (e => {
+			test.comment(e.stack)
+			test.fail(e.message)
+		}),
 	}
 }
 
