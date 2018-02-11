@@ -5,7 +5,7 @@ import { adapt } from '@cycle/run/lib/adapt'
 
 import idb from 'idb'
 
-import StoreSelector from './StoreSelector'
+import StoreSelector from './store-selector'
 import { MultiKeyCache } from './cache'
 
 
