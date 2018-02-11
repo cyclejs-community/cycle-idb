@@ -33,8 +33,14 @@ const ReadFromDb = ({ dbPromise, storeName, indexName }) => (operation, key) => 
 
 export default function IndexSelector(dbPromise, result$, storeName, indexName) {
 	const filterByKey = key => ({ result }) => (key === undefined || result.indexes[indexName].oldValue === key || result.indexes[indexName].newValue === key)
+	const filterByKeyRange = key => ({ result }) => {
+		return key === undefined
+			|| (result.indexes[indexName].oldValue && key.includes(result.indexes[indexName].oldValue))
+			|| (result.indexes[indexName].newValue && key.includes(result.indexes[indexName].newValue))
+	}
+
 	const makeDbReader = ReadFromDb({ dbPromise, storeName, indexName })
-	const keyRangeCache = MultiKeyCache(key => KeyRangeSelector(result$, makeDbReader, filterByKey, key), hashKey)
+	const keyRangeCache = MultiKeyCache(key => KeyRangeSelector(result$, makeDbReader, filterByKeyRange, indexName, key), hashKey)
 
 	return {
 		get: MultiKeyCache(key => GetSelector(result$, makeDbReader, filterByKey, key)),
@@ -43,10 +49,14 @@ export default function IndexSelector(dbPromise, result$, storeName, indexName) 
 		getKey: MultiKeyCache(key => GetKeySelector(result$, makeDbReader, filterByKey, key)),
 		count: MultiKeyCache(key => CountSelector(result$, makeDbReader, filterByKey, key)),
 		only: key => keyRangeCache(IDBKeyRange.only(key)),
+		bound: (lower, upper, lowerOpen=false, upperOpen=false) =>
+			keyRangeCache(IDBKeyRange.bound(lower, upper, lowerOpen, upperOpen)),
+		lowerBound: (lower, lowerOpen=false) => keyRangeCache(IDBKeyRange.lowerBound(lower, lowerOpen)),
+		upperBound: (upper, upperOpen=false) => keyRangeCache(IDBKeyRange.upperBound(upper, upperOpen)),
 	}
 }
 
-function KeyRangeSelector(result$, makeDbReader, filterByKey, keyRange) {
+function KeyRangeSelector(result$, makeDbReader, filterByKey, indexName, keyRange) {
 	return {
 		get: MultiKeyCache(key => GetSelector(result$, makeDbReader, filterByKey, keyRange)),
 		getAll: MultiKeyCache(key => GetAllSelector(result$, makeDbReader, filterByKey, keyRange)),
