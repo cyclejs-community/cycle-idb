@@ -141,3 +141,65 @@ testSelector('index(...).only(key).get()', { test,
 		]
 	}]
 })
+
+const getAllTests = [{
+	name: 'index(...).only(key).getAll()',
+	getStream: store => store.index('type').only('unicorn').getAll()
+}, {
+	name: 'index(...).bound(key).getAll()',
+	getStream: store => store.index('type').bound('t', 'v').getAll()
+}]
+getAllTests.forEach(({ name, getStream }) => testSelector(name, { test,
+	getStream,
+	cases: [{
+		description: 'should return a list with the value matching the key',
+		initialData: twilightAndFluttershy,
+		output: [
+			[[ twilight ], 'Twilight is sent']
+		]
+	}, {
+		description: 'should be updated when an object with the given key is added',
+		initialData: [ fluttershy ],
+		input$: xs.of($add('ponies', twilight)),
+		output: [
+			[[], 'No Twilight found'],
+			[[ twilight ], 'Twilight is added'],
+		]
+	}, {
+		description: 'should be updated when an object with the given key is modified',
+		initialData: twilightAndFluttershy,
+		input$: xs.of($update('ponies', {...twilight, element: 'magic'})),
+		output: [
+			[[twilight], 'Twilight found'],
+			[[{...twilight, element: 'magic'}], 'Twilight is modified'],
+		]
+	}, {
+		description: 'should be updated when an object with the given key is deleted',
+		initialData: twilightAndFluttershy,
+		input$: xs.of($delete('ponies', 'Twilight Sparkle')),
+		output: [
+			[[twilight], 'Twilight found'],
+			[[], 'Twilight is removed'],
+		]
+	}, {
+		description: 'should not be updated when an object with a different key is added',
+		input$: xs.of($add('ponies', fluttershy)),
+		output: [
+			[[], 'No Twilight found'],
+		]
+	}, {
+		description: 'should not be updated when an object with a different key is modified',
+		input$: xs.of($update('ponies', fluttershy)),
+		initialData: twilightAndFluttershy,
+		output: [
+			[[twilight], 'Twilight found'],
+		]
+	}, {
+		description: 'should not be updated when an object with a different key is deleted',
+		input$: xs.of($delete('ponies', 'Fluttershy')),
+		initialData: twilightAndFluttershy,
+		output: [
+			[[twilight], 'Twilight found'],
+		]
+	}]
+}))
