@@ -23,16 +23,18 @@ import IndexSelector from './index-selector'
 
 
 export default function StoreSelector(dbPromise, result$$, storeName) {
+	const makeDbReader = ReadFromDb({ dbPromise, storeName })
+	const makeDbCursorReader = ReadFromDbCursor({ dbPromise, storeName })
 	const result$ = flattenConcurrently(result$$.filter($ => $._store === storeName))
-	const keyCache = MultiKeyCache(key => KeyRangeSelector(dbPromise, result$, storeName, key), hashKey)
+	const keyCache = MultiKeyCache(key => KeyRangeSelector(result$, makeDbReader, key), hashKey)
 
 	return {
 		get: key => keyCache(IDBKeyRange.only(key)).get(),
-		getAll: SingleKeyCache(() => GetAllSelector(dbPromise, result$, storeName)),
-		getAllKeys: SingleKeyCache(() => GetAllKeysSelector(dbPromise, result$, storeName)),
-		count: SingleKeyCache(() => CountSelector(dbPromise, result$, storeName)),
+		getAll: SingleKeyCache(() => GetAllSelector(result$, makeDbReader)),
+		getAllKeys: SingleKeyCache(() => GetAllKeysSelector(result$, makeDbReader)),
+		count: SingleKeyCache(() => CountSelector(result$, makeDbReader)),
 		index: MultiKeyCache(indexName => IndexSelector(dbPromise, result$, storeName, indexName)),
-		query: MultiKeyCache(filter => QuerySelector(dbPromise, result$, filter, storeName)),
+		query: MultiKeyCache(filter => QuerySelector(result$, makeDbCursorReader, filter)),
 		only: key => keyCache(IDBKeyRange.only(key)),
 		bound: (lower, upper, lowerOpen=false, upperOpen=false) =>
 			keyCache(IDBKeyRange.bound(lower, upper, lowerOpen, upperOpen)),
@@ -41,17 +43,17 @@ export default function StoreSelector(dbPromise, result$$, storeName) {
 	}
 }
 
-function KeyRangeSelector(dbPromise, result$, storeName, keyRange) {
+function KeyRangeSelector(result$, makeDbReader, keyRange) {
 	return {
-		get: SingleKeyCache(() => GetSelector(dbPromise, result$, storeName, keyRange), hashKey),
-		getAll: SingleKeyCache(() => GetAllSelector(dbPromise, result$, storeName, keyRange), hashKey),
-		getAllKeys: SingleKeyCache(() => GetAllKeysSelector(dbPromise, result$, storeName, keyRange), hashKey),
-		count: SingleKeyCache(() => CountSelector(dbPromise, result$, storeName, keyRange), hashKey),
+		get: SingleKeyCache(() => GetSelector(result$, makeDbReader, keyRange), hashKey),
+		getAll: SingleKeyCache(() => GetAllSelector(result$, makeDbReader, keyRange), hashKey),
+		getAllKeys: SingleKeyCache(() => GetAllKeysSelector(result$, makeDbReader, keyRange), hashKey),
+		count: SingleKeyCache(() => CountSelector(result$, makeDbReader, keyRange), hashKey),
 	}
 }
 
-const GetSelector = (dbPromise, result$, storeName, key) => {
-	const readFromDb = ReadFromDb('get', { dbPromise, storeName, key })
+const GetSelector = (result$, makeDbReader, key) => {
+	const readFromDb = makeDbReader('get', key)
 	const dbResult$$ = result$.filter(any(resultIsCleared, resultIsInKey(key)))
 		.startWith(1)
 		.map(readFromDb)
@@ -61,8 +63,8 @@ const GetSelector = (dbPromise, result$, storeName, key) => {
 		.remember()
 }
 
-const GetAllSelector = (dbPromise, result$, storeName, key) => {
-	const readFromDb = ReadFromDb('getAll', { dbPromise, storeName, key })
+const GetAllSelector = (result$, makeDbReader, key) => {
+	const readFromDb = makeDbReader('getAll', key)
 	const dbResult$$ = result$
 		.filter(any(keyIsUndefined(key), resultIsCleared, resultIsInKey(key)))
 		.startWith(1)
@@ -73,8 +75,8 @@ const GetAllSelector = (dbPromise, result$, storeName, key) => {
 		.remember()
 }
 
-const CountSelector = (dbPromise, result$, storeName, key) => {
-	const readFromDb = ReadFromDb('count', { dbPromise, storeName, key })
+const CountSelector = (result$, makeDbReader, key) => {
+	const readFromDb = makeDbReader('count', key)
 	const dbResult$$ = result$
 		.filter(any(keyIsUndefined(key), resultIsCleared, resultIsInKey(key)))
 		.startWith(1)
@@ -85,8 +87,8 @@ const CountSelector = (dbPromise, result$, storeName, key) => {
 		.remember()
 }
 
-const GetAllKeysSelector = (dbPromise, result$, storeName, key) => {
-	const readFromDb = ReadFromDb('getAllKeys', { dbPromise, storeName, key })
+const GetAllKeysSelector = (result$, makeDbReader, key) => {
+	const readFromDb = makeDbReader('getAllKeys', key)
 	const dbResult$$ = result$
 		.filter(any(
 			resultIsCleared,
@@ -101,8 +103,8 @@ const GetAllKeysSelector = (dbPromise, result$, storeName, key) => {
 		.remember()
 }
 
-const QuerySelector = (dbPromise, result$, filter, storeName) => {
-	const readFromDb = ReadFromDbCursor({ dbPromise, filter, storeName })
+const QuerySelector = (result$, makeDbCursorReader, filter) => {
+	const readFromDb = makeDbCursorReader(filter)
 	const dbResult$$ = result$
 		.filter(any(resultIsCleared, ({ result: { oldValue, newValue }}) => 
 			(oldValue && filter(oldValue)) || (newValue && filter(newValue))))

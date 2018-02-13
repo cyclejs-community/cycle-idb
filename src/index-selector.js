@@ -5,7 +5,7 @@ import dropRepeats from 'xstream/extra/dropRepeats'
 import { adapt } from '@cycle/run/lib/adapt'
 
 import {
-	//ReadFromDb,
+	ReadFromDb,
 	hashKey,
 	keyIsUndefined,
 	promiseToStream,
@@ -15,21 +15,8 @@ import {
 
 import { MultiKeyCache } from './cache'
 
-import { any, pipe, xor, isDefined } from './util'
+import { any, xor, isDefined } from './util'
 
-
-const ReadFromDb = ({ dbPromise, storeName, indexName }) => (operation, key) => {
-	const read = pipe(
-		db => db.transaction(storeName).objectStore(storeName),
-		store => indexName ? store.index(indexName) : store,
-		store => store[operation].bind(store)
-	)
-	return async () => {
-		const db = await dbPromise
-		const data = await read(db)(key)
-		return data
-	}
-}
 
 export default function IndexSelector(dbPromise, result$, storeName, indexName) {
 	const filterByKey = key => ({ result }) => (key === undefined || result.indexes[indexName].oldValue === key || result.indexes[indexName].newValue === key)
@@ -100,7 +87,6 @@ function GetAllKeysSelector(result$, makeDbReader, filterByKey, keyIsAddedOrRemo
 	const readFromDb = makeDbReader('getAllKeys', key)
 	const dbResult$$ = result$.filter(any(resultIsCleared, filterByKey(key)))
 		.filter(any(resultIsCleared, ({ result }) => result.indexes.hasOwnProperty(indexName)))
-		//.filter(any(resultIsCleared, ({ result }) => xor(result.indexes[indexName].oldValue !== key, result.indexes[indexName].newValue !== key)))
 		.filter(any(resultIsCleared, keyIsAddedOrRemoved(key)))
 		.startWith(1)
 		.map(readFromDb)

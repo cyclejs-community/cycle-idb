@@ -14,7 +14,7 @@ export const keyIsUndefined = key => () => key === undefined
 
 export const hashKey = key => key instanceof IDBKeyRange ? `${key.lower}#${key.lowerOpen}#${key.upper}#${key.upperOpen}` : key
 
-export const ReadFromDb = (operation, { dbPromise, storeName, indexName, key }) => {
+export const ReadFromDb = ({ dbPromise, storeName, indexName }) => (operation, key) => {
 	const read = pipe(
 		db => db.transaction(storeName).objectStore(storeName),
 		store => indexName ? store.index(indexName) : store,
@@ -27,7 +27,7 @@ export const ReadFromDb = (operation, { dbPromise, storeName, indexName, key }) 
 	}
 }
 
-export const ReadFromDbCursor = ({ filter, storeName, dbPromise }) => async () => {
+export const ReadFromDbCursor = ({ storeName, dbPromise }) => filter => async () => {
 	const db = await dbPromise
 	let cursor = await db.transaction(storeName)
 		.objectStore(storeName)
