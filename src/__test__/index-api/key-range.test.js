@@ -480,3 +480,89 @@ upperBoundTests.forEach(({ name, getStream, transformOutput, updateWhenModified 
 		]
 	}]
 }))
+
+const onlyTests = [{
+	name: 'index(...).only(writer).getAll()',
+	getStream: store => store.index('writer').only('Cindy Morrow').getAll(),
+	transformOutput: x => x.map(x => x),
+	updateWhenModified: true,
+}, {
+	name: 'index(...).only(writer).getAllKeys()',
+	getStream: store => store.index('writer').only('Cindy Morrow').getAllKeys(),
+	transformOutput: x => x.map(x => x.number),
+	updateWhenModified: false,
+}, {
+	name: 'index(...).only(writer).count()',
+	getStream: store => store.index('writer').only('Cindy Morrow').count(),
+	transformOutput: x => x.length,
+	updateWhenModified: false,
+}, {
+	name: 'index(...).only(writer).get()',
+	getStream: store => store.index('writer').only('Cindy Morrow').get(),
+	transformOutput: x => x[0],
+	updateWhenModified: true,
+}, {
+	name: 'index(...).only(writer).getKey()',
+	getStream: store => store.index('writer').only('Cindy Morrow').getKey(),
+	transformOutput: x => x[0].number,
+	updateWhenModified: false,
+}]
+const onlyEpisodes = [griffonTheBrushOff, winterWrapUp]
+onlyTests.forEach(({ name, getStream, transformOutput, updateWhenModified }) => testSelector(name, { test,
+	getStream,
+	mockDb: mockEpisodesDb,
+	cases: [{
+		description: 'should get episodes within range',
+		initialData: mlpEpisodesList,
+		output: [
+			[transformOutput(onlyEpisodes)],
+		]
+	}, {
+		description: 'should update when episode within range is added',
+		initialData: mlpEpisodesList.filter(x => x !== winterWrapUp),
+		input$: xs.of($add('ponies', winterWrapUp)),
+		output: [
+			[transformOutput(onlyEpisodes.filter(x => x !== winterWrapUp))],
+			[transformOutput(onlyEpisodes)],
+		]
+	}, {
+		description: 'should update when episode within range is modified',
+		initialData: mlpEpisodesList,
+		input$: xs.of($update('ponies', {...winterWrapUp, views: 3})),
+		output: updateWhenModified ? [
+			[transformOutput(onlyEpisodes)],
+			[transformOutput(onlyEpisodes.map(x => x === winterWrapUp ? {...x, views: 3} : x))],
+		] : [
+			[transformOutput(onlyEpisodes)],
+		]
+	}, {
+		description: 'should update when episode within range is removed',
+		initialData: mlpEpisodesList,
+		input$: xs.of($delete('ponies', winterWrapUp.number)),
+		output: [
+			[transformOutput(onlyEpisodes)],
+			[transformOutput(onlyEpisodes.filter(x => x !== winterWrapUp)), 'Episode is deleted'],
+		]
+	}, {
+		description: 'should not update when episode outside range is added',
+		initialData: mlpEpisodesList.filter(x => x !== swarmOfTheCentury),
+		input$: xs.of($add('ponies', swarmOfTheCentury)),
+		output: [
+			[transformOutput(onlyEpisodes), 'Only one event is received.'],
+		]
+	}, {
+		description: 'should not update when episode outside range is modified',
+		initialData: mlpEpisodesList.filter(x => x !== swarmOfTheCentury),
+		input$: xs.of($update('ponies', {...swarmOfTheCentury, views: 4})),
+		output: [
+			[transformOutput(onlyEpisodes), 'Only one event is received.'],
+		]
+	}, {
+		description: 'should not update when episode outside range is deleted',
+		initialData: mlpEpisodesList,
+		input$: xs.of($delete('ponies', swarmOfTheCentury.number)),
+		output: [
+			[transformOutput(onlyEpisodes), 'Only one event is received.'],
+		]
+	}]
+}))
