@@ -256,7 +256,7 @@ These listeners will also catch the errors raised by writing operations that aff
   - [ ] Custom filtering over items matching an index
   - [ ] Custom update over all items in store
   - [ ] Custom update over items matching an index.
-- [ ] Support IDBKeyRange
+- [x] ~~Support IDBKeyRange~~
   - [x] ~~Key ranges in store selector~~
-  - [ ] Key ranges in index selector
+  - [x] ~~Key ranges in index selector~~
 
