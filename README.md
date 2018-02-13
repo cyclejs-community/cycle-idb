@@ -186,6 +186,19 @@ const twilight$ = ponyNameIndex.get('Twilight Sparkle') // This returns a stream
 const unicornCount$ = ponyTypeIndex.count('unicorn') // This returns a stream subscribed to the count of unicorns
 ```
 
+#### Key ranges
+
+All key range selectors available in a store are also available for indexes.
+
+```javascript
+const ponyNameIndex$ = sources.IDB.store('ponies').index('name')
+
+const twilight$ = ponyNameIndex$.only('Twilight Sparkle').get()
+const firstPonies$ = ponyNameIndex$.upperBound('R').getAll()
+const lastPoniesKeys$ = ponyNameIndex$.lowerBound('R').getAllKeys()
+const poniesFSCount$ = ponyNameIndex$.bound('F', 'S').count()
+```
+
 ### Error handling
 
 The cycle-idb driver exposes an `error$` stream that broadcasts all errors that occur during any database writing operation. The error event is the error thrown by IndexedDB with the following data added:
