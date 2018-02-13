@@ -11,6 +11,7 @@ import {
 	mockDbWithTypeIndex,
 	mockDbWithNameIndex,
 	mockDbWithNumberIndex,
+	mockEpisodesDb,
 } from 'idb-driver.mock'
 import idb from 'idb'
 
@@ -19,6 +20,11 @@ import {
 	sequenceListener,
 	range,
 } from 'test'
+
+import {
+	mlpEpisodes,
+	mlpEpisodesList,
+} from 'data/mlp-episodes'
 
 import makeIdbDriver, {
 	$add,
@@ -73,12 +79,12 @@ const fluttershy = { name: 'Fluttershy', type: 'pegasus' }
 const twilightRarityAndFluttershy = [ twilight, rarity, fluttershy ]
 const twilightAndFluttershy = [ twilight, fluttershy ]
 
-const testSelector = (selectorName, { test, cases, getStream }) => {
+const testSelector = (selectorName, { test, cases, getStream, mockDb=mockDbWithTypeIndex }) => {
 	cases.forEach(({ description, initialData=[], input$=xs.never(), output, skip=false }) => {
 		const run = skip ? test.skip : test
 		run(`#${selectorName} ${description}`, t => {
 			t.plan(output.length)
-			const driver = makeIdbDriver(getTestId(), 1, mockDbWithTypeIndex(initialData))(input$)
+			const driver = makeIdbDriver(getTestId(), 1, mockDb(initialData))(input$)
 			getStream(driver.store('ponies')).addListener(sequenceListener(t)([
 				...output.map(([expected, text]) => value => t.deepEqual(value, expected, text)),
 				value => t.fail(`Unexpected value: ${JSON.stringify(value)}`),
@@ -200,6 +206,99 @@ getAllTests.forEach(({ name, getStream }) => testSelector(name, { test,
 		initialData: twilightAndFluttershy,
 		output: [
 			[[twilight], 'Twilight found'],
+		]
+	}]
+}))
+
+const {
+	friendshipIsMagic_1,
+	friendshipIsMagic_2,
+	theTicketMaster,
+	applebuckSeason,
+	griffonTheBrushOff,
+} = mlpEpisodes
+
+const boundTests = [{
+	name: 'index(...).bound(date_1, date_2).getAll()',
+	getStream: store => store.index('release_date').bound('2010-10-22', '2010-11-12').getAll(),
+	transformOutput: x => x.map(x => x),
+	updateWhenModified: true,
+}, {
+	name: 'index(...).bound(date_1, date_2).getAllKeys()',
+	getStream: store => store.index('release_date').bound('2010-10-22', '2010-11-12').getAllKeys(),
+	transformOutput: x => x.map(x => x.number),
+	updateWhenModified: false,
+}, {
+	name: 'index(...).bound(date_1, date_2).count()',
+	getStream: store => store.index('release_date').bound('2010-10-22', '2010-11-12').count(),
+	transformOutput: x => x.length,
+	updateWhenModified: false,
+}, {
+	name: 'index(...).bound(date_1, date_2).get()',
+	getStream: store => store.index('release_date').bound('2010-10-22', '2010-11-12').get(),
+	transformOutput: x => x[0],
+	updateWhenModified: true,
+}, {
+	name: 'index(...).bound(date_1, date_2).getKey()',
+	getStream: store => store.index('release_date').bound('2010-10-22', '2010-11-12').getKey(),
+	transformOutput: x => x[0].number,
+	updateWhenModified: false,
+}]
+boundTests.forEach(({ name, getStream, transformOutput, updateWhenModified }) => testSelector(name, { test,
+	getStream,
+	mockDb: mockEpisodesDb,
+	cases: [{
+		description: 'should get episodes within range',
+		initialData: mlpEpisodesList,
+		output: [
+			[transformOutput([friendshipIsMagic_2, theTicketMaster, applebuckSeason, griffonTheBrushOff]), 'Episodes released between 2010-10-22 and 2010-11-12 found'],
+		]
+	}, {
+		description: 'should update when episode within range is added',
+		initialData: mlpEpisodesList.filter(x => x !== applebuckSeason),
+		input$: xs.of($add('ponies', applebuckSeason)),
+		output: [
+			[transformOutput([friendshipIsMagic_2, theTicketMaster, griffonTheBrushOff]), 'Episodes 2, 3, and 5 found'],
+			[transformOutput([friendshipIsMagic_2, theTicketMaster, applebuckSeason, griffonTheBrushOff]), 'Episode 4 is added'],
+		]
+	}, {
+		description: 'should update when episode within range is modified',
+		initialData: mlpEpisodesList,
+		input$: xs.of($update('ponies', {...theTicketMaster, views: 3})),
+		output: updateWhenModified ? [
+			[transformOutput([friendshipIsMagic_2, theTicketMaster, applebuckSeason, griffonTheBrushOff])],
+			[transformOutput([friendshipIsMagic_2, {...theTicketMaster, views: 3}, applebuckSeason, griffonTheBrushOff])],
+		] : [
+			[transformOutput([friendshipIsMagic_2, theTicketMaster, applebuckSeason, griffonTheBrushOff])],
+		]
+	}, {
+		description: 'should update when episode within range is removed',
+		initialData: mlpEpisodesList,
+		input$: xs.of($delete('ponies', 2)),
+		output: [
+			[transformOutput([friendshipIsMagic_2, theTicketMaster, applebuckSeason, griffonTheBrushOff])],
+			[transformOutput([theTicketMaster, applebuckSeason, griffonTheBrushOff]), 'Episode is deleted'],
+		]
+	}, {
+		description: 'should not update when episode outside range is added',
+		initialData: mlpEpisodesList.filter(x => x !== friendshipIsMagic_1),
+		input$: xs.of($add('ponies', friendshipIsMagic_1)),
+		output: [
+			[transformOutput([friendshipIsMagic_2, theTicketMaster, applebuckSeason, griffonTheBrushOff]), 'Only one event is received.'],
+		]
+	}, {
+		description: 'should not update when episode outside range is modified',
+		initialData: mlpEpisodesList.filter(x => x !== friendshipIsMagic_1),
+		input$: xs.of($update('ponies', {...friendshipIsMagic_1, views: 4})),
+		output: [
+			[transformOutput([friendshipIsMagic_2, theTicketMaster, applebuckSeason, griffonTheBrushOff]), 'Only one event is received.'],
+		]
+	}, {
+		description: 'should not update when episode outside range is deleted',
+		initialData: mlpEpisodesList,
+		input$: xs.of($delete('ponies', 1)),
+		output: [
+			[transformOutput([friendshipIsMagic_2, theTicketMaster, applebuckSeason, griffonTheBrushOff]), 'Only one event is received.'],
 		]
 	}]
 }))

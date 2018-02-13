@@ -51,3 +51,13 @@ export function mockDbWithNumberIndex(entries=[]) {
 		entries.forEach(e => ponies.put(e))
 	}
 }
+
+export function mockEpisodesDb(entries=[]) {
+	return upgradeDb => {
+		const episodes = upgradeDb.createObjectStore('ponies', { keyPath: 'number' })
+		episodes.createIndex('release_date', 'release_date')
+		episodes.createIndex('season', 'season')
+		episodes.createIndex('writer', 'writer')
+		entries.forEach(e => episodes.put(e))
+	}
+}

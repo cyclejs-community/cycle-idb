@@ -15,7 +15,7 @@ import {
 
 import { MultiKeyCache } from './cache'
 
-import { any, pipe, xor } from './util'
+import { any, pipe, xor, isDefined } from './util'
 
 
 const ReadFromDb = ({ dbPromise, storeName, indexName }) => (operation, key) => {
@@ -38,6 +38,8 @@ export default function IndexSelector(dbPromise, result$, storeName, indexName) 
 			|| (result.indexes[indexName].oldValue && key.includes(result.indexes[indexName].oldValue))
 			|| (result.indexes[indexName].newValue && key.includes(result.indexes[indexName].newValue))
 	}
+	const keyIsAddedOrRemoved = key =>
+		({ result }) => xor(result.indexes[indexName].oldValue !== key, result.indexes[indexName].newValue !== key)
 
 	const makeDbReader = ReadFromDb({ dbPromise, storeName, indexName })
 	const keyRangeCache = MultiKeyCache(key => KeyRangeSelector(result$, makeDbReader, filterByKeyRange, indexName, key), hashKey)
@@ -45,7 +47,7 @@ export default function IndexSelector(dbPromise, result$, storeName, indexName) 
 	return {
 		get: MultiKeyCache(key => GetSelector(result$, makeDbReader, filterByKey, key)),
 		getAll: MultiKeyCache(key => GetAllSelector(result$, makeDbReader, filterByKey, key)),
-		getAllKeys: MultiKeyCache(key => GetAllKeysSelector(result$, makeDbReader, filterByKey, indexName, key)),
+		getAllKeys: MultiKeyCache(key => GetAllKeysSelector(result$, makeDbReader, filterByKey, keyIsAddedOrRemoved, indexName, key)),
 		getKey: MultiKeyCache(key => GetKeySelector(result$, makeDbReader, filterByKey, key)),
 		count: MultiKeyCache(key => CountSelector(result$, makeDbReader, filterByKey, key)),
 		only: key => keyRangeCache(IDBKeyRange.only(key)),
@@ -57,10 +59,16 @@ export default function IndexSelector(dbPromise, result$, storeName, indexName) 
 }
 
 function KeyRangeSelector(result$, makeDbReader, filterByKey, indexName, keyRange) {
+	const indexIsIncluded = (key, indexValue) => isDefined(indexValue) && key.includes(indexValue)
+	const keyIsAddedOrRemoved = key => ({ result }) => xor(
+		indexIsIncluded(key, result.indexes[indexName].oldValue),
+		indexIsIncluded(key, result.indexes[indexName].newValue)
+	)
+	
 	return {
 		get: MultiKeyCache(key => GetSelector(result$, makeDbReader, filterByKey, keyRange)),
 		getAll: MultiKeyCache(key => GetAllSelector(result$, makeDbReader, filterByKey, keyRange)),
-		getAllKeys: MultiKeyCache(key => GetAllKeysSelector(result$, makeDbReader, filterByKey, indexName, keyRange)),
+		getAllKeys: MultiKeyCache(key => GetAllKeysSelector(result$, makeDbReader, filterByKey, keyIsAddedOrRemoved, indexName, keyRange)),
 		getKey: MultiKeyCache(key => GetKeySelector(result$, makeDbReader, filterByKey, keyRange)),
 		count: MultiKeyCache(key => CountSelector(result$, makeDbReader, filterByKey, keyRange)),
 	}
@@ -88,11 +96,12 @@ function GetAllSelector(result$, makeDbReader, filterByKey, key) {
 		.remember()
 }
 
-function GetAllKeysSelector(result$, makeDbReader, filterByKey, indexName, key) {
+function GetAllKeysSelector(result$, makeDbReader, filterByKey, keyIsAddedOrRemoved, indexName, key) {
 	const readFromDb = makeDbReader('getAllKeys', key)
 	const dbResult$$ = result$.filter(any(resultIsCleared, filterByKey(key)))
 		.filter(any(resultIsCleared, ({ result }) => result.indexes.hasOwnProperty(indexName)))
-		.filter(any(resultIsCleared, ({ result }) => xor(result.indexes[indexName].oldValue !== key, result.indexes[indexName].newValue !== key)))
+		//.filter(any(resultIsCleared, ({ result }) => xor(result.indexes[indexName].oldValue !== key, result.indexes[indexName].newValue !== key)))
+		.filter(any(resultIsCleared, keyIsAddedOrRemoved(key)))
 		.startWith(1)
 		.map(readFromDb)
 		.map(promiseToStream)

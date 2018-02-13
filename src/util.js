@@ -19,3 +19,5 @@ export const and = (...fns) => value => {
 }
 
 export const pipe = (...fns) => data => fns.reduce((acc, fn) => fn(acc), data)
+
+export const isDefined = value => value !== undefined
