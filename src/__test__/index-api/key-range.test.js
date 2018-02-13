@@ -216,6 +216,12 @@ const {
 	theTicketMaster,
 	applebuckSeason,
 	griffonTheBrushOff,
+	// ...
+	lookBeforeYouSleep,
+	bridleGossip,
+	swarmOfTheCentury,
+	winterWrapUp,
+	callOfTheCutie,
 } = mlpEpisodes
 
 const boundTests = [{
@@ -299,6 +305,178 @@ boundTests.forEach(({ name, getStream, transformOutput, updateWhenModified }) =>
 		input$: xs.of($delete('ponies', 1)),
 		output: [
 			[transformOutput([friendshipIsMagic_2, theTicketMaster, applebuckSeason, griffonTheBrushOff]), 'Only one event is received.'],
+		]
+	}]
+}))
+
+const lowerBoundTests = [{
+	name: 'index(...).lowerBound(date).getAll()',
+	getStream: store => store.index('release_date').lowerBound('2010-12-03').getAll(),
+	transformOutput: x => x.map(x => x),
+	updateWhenModified: true,
+}, {
+	name: 'index(...).lowerBound(date).getAllKeys()',
+	getStream: store => store.index('release_date').lowerBound('2010-12-03').getAllKeys(),
+	transformOutput: x => x.map(x => x.number),
+	updateWhenModified: false,
+}, {
+	name: 'index(...).lowerBound(date).count()',
+	getStream: store => store.index('release_date').lowerBound('2010-12-03').count(),
+	transformOutput: x => x.length,
+	updateWhenModified: false,
+}, {
+	name: 'index(...).lowerBound(date).get()',
+	getStream: store => store.index('release_date').lowerBound('2010-12-03').get(),
+	transformOutput: x => x[0],
+	updateWhenModified: true,
+}, {
+	name: 'index(...).lowerBound(date).getKey()',
+	getStream: store => store.index('release_date').lowerBound('2010-12-03').getKey(),
+	transformOutput: x => x[0].number,
+	updateWhenModified: false,
+}]
+const lowerBoundEpisodes = [lookBeforeYouSleep, bridleGossip, swarmOfTheCentury, winterWrapUp, callOfTheCutie]
+lowerBoundTests.forEach(({ name, getStream, transformOutput, updateWhenModified }) => testSelector(name, { test,
+	getStream,
+	mockDb: mockEpisodesDb,
+	cases: [{
+		description: 'should get episodes within range',
+		initialData: mlpEpisodesList,
+		output: [
+			[transformOutput(lowerBoundEpisodes)],
+		]
+	}, {
+		description: 'should update when episode within range is added',
+		initialData: mlpEpisodesList.filter(x => x !== lookBeforeYouSleep),
+		input$: xs.of($add('ponies', lookBeforeYouSleep)),
+		output: [
+			[transformOutput(lowerBoundEpisodes.filter(x => x !== lookBeforeYouSleep))],
+			[transformOutput(lowerBoundEpisodes)],
+		]
+	}, {
+		description: 'should update when episode within range is modified',
+		initialData: mlpEpisodesList,
+		input$: xs.of($update('ponies', {...lookBeforeYouSleep, views: 3})),
+		output: updateWhenModified ? [
+			[transformOutput(lowerBoundEpisodes)],
+			[transformOutput(lowerBoundEpisodes.map(x => x === lookBeforeYouSleep ? {...lookBeforeYouSleep, views: 3} : x))],
+		] : [
+			[transformOutput(lowerBoundEpisodes)],
+		]
+	}, {
+		description: 'should update when episode within range is removed',
+		initialData: mlpEpisodesList,
+		input$: xs.of($delete('ponies', lookBeforeYouSleep.number)),
+		output: [
+			[transformOutput(lowerBoundEpisodes)],
+			[transformOutput(lowerBoundEpisodes.filter(x => x !== lookBeforeYouSleep)), 'Episode is deleted'],
+		]
+	}, {
+		description: 'should not update when episode outside range is added',
+		initialData: mlpEpisodesList.filter(x => x !== friendshipIsMagic_1),
+		input$: xs.of($add('ponies', friendshipIsMagic_1)),
+		output: [
+			[transformOutput(lowerBoundEpisodes), 'Only one event is received.'],
+		]
+	}, {
+		description: 'should not update when episode outside range is modified',
+		initialData: mlpEpisodesList.filter(x => x !== friendshipIsMagic_1),
+		input$: xs.of($update('ponies', {...friendshipIsMagic_1, views: 4})),
+		output: [
+			[transformOutput(lowerBoundEpisodes), 'Only one event is received.'],
+		]
+	}, {
+		description: 'should not update when episode outside range is deleted',
+		initialData: mlpEpisodesList,
+		input$: xs.of($delete('ponies', applebuckSeason.number)),
+		output: [
+			[transformOutput(lowerBoundEpisodes), 'Only one event is received.'],
+		]
+	}]
+}))
+
+const upperBoundTests = [{
+	name: 'index(...).upperBound(date).getAll()',
+	getStream: store => store.index('release_date').upperBound('2010-11-05').getAll(),
+	transformOutput: x => x.map(x => x),
+	updateWhenModified: true,
+}, {
+	name: 'index(...).upperBound(date).getAllKeys()',
+	getStream: store => store.index('release_date').upperBound('2010-11-05').getAllKeys(),
+	transformOutput: x => x.map(x => x.number),
+	updateWhenModified: false,
+}, {
+	name: 'index(...).upperBound(date).count()',
+	getStream: store => store.index('release_date').upperBound('2010-11-05').count(),
+	transformOutput: x => x.length,
+	updateWhenModified: false,
+}, {
+	name: 'index(...).upperBound(date).get()',
+	getStream: store => store.index('release_date').upperBound('2010-11-05').get(),
+	transformOutput: x => x[0],
+	updateWhenModified: true,
+}, {
+	name: 'index(...).upperBound(date).getKey()',
+	getStream: store => store.index('release_date').upperBound('2010-11-05').getKey(),
+	transformOutput: x => x[0].number,
+	updateWhenModified: false,
+}]
+const upperBoundEpisodes = [friendshipIsMagic_1, friendshipIsMagic_2, theTicketMaster, applebuckSeason]
+upperBoundTests.forEach(({ name, getStream, transformOutput, updateWhenModified }) => testSelector(name, { test,
+	getStream,
+	mockDb: mockEpisodesDb,
+	cases: [{
+		description: 'should get episodes within range',
+		initialData: mlpEpisodesList,
+		output: [
+			[transformOutput(upperBoundEpisodes)],
+		]
+	}, {
+		description: 'should update when episode within range is added',
+		initialData: mlpEpisodesList.filter(x => x !== theTicketMaster),
+		input$: xs.of($add('ponies', theTicketMaster)),
+		output: [
+			[transformOutput(upperBoundEpisodes.filter(x => x !== theTicketMaster))],
+			[transformOutput(upperBoundEpisodes)],
+		]
+	}, {
+		description: 'should update when episode within range is modified',
+		initialData: mlpEpisodesList,
+		input$: xs.of($update('ponies', {...theTicketMaster, views: 3})),
+		output: updateWhenModified ? [
+			[transformOutput(upperBoundEpisodes)],
+			[transformOutput(upperBoundEpisodes.map(x => x === theTicketMaster ? {...theTicketMaster, views: 3} : x))],
+		] : [
+			[transformOutput(upperBoundEpisodes)],
+		]
+	}, {
+		description: 'should update when episode within range is removed',
+		initialData: mlpEpisodesList,
+		input$: xs.of($delete('ponies', theTicketMaster.number)),
+		output: [
+			[transformOutput(upperBoundEpisodes)],
+			[transformOutput(upperBoundEpisodes.filter(x => x !== theTicketMaster)), 'Episode is deleted'],
+		]
+	}, {
+		description: 'should not update when episode outside range is added',
+		initialData: mlpEpisodesList.filter(x => x !== swarmOfTheCentury),
+		input$: xs.of($add('ponies', swarmOfTheCentury)),
+		output: [
+			[transformOutput(upperBoundEpisodes), 'Only one event is received.'],
+		]
+	}, {
+		description: 'should not update when episode outside range is modified',
+		initialData: mlpEpisodesList.filter(x => x !== swarmOfTheCentury),
+		input$: xs.of($update('ponies', {...swarmOfTheCentury, views: 4})),
+		output: [
+			[transformOutput(upperBoundEpisodes), 'Only one event is received.'],
+		]
+	}, {
+		description: 'should not update when episode outside range is deleted',
+		initialData: mlpEpisodesList,
+		input$: xs.of($delete('ponies', swarmOfTheCentury.number)),
+		output: [
+			[transformOutput(upperBoundEpisodes), 'Only one event is received.'],
 		]
 	}]
 }))
