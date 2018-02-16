@@ -35,11 +35,6 @@ export const ReadFromDbCursor = ({ dbPromise, storeName, indexName }) => (filter
 	return async () => {
 		const db = await dbPromise
 		let cursor = await openStore(db).openCursor(key)
-		/*
-		let cursor = await db.transaction(storeName)
-			.objectStore(storeName)
-			.openCursor()
-			*/
 		const result = []
 		while (cursor) {
 			if (filter(cursor.value)) {
