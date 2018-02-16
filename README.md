@@ -65,17 +65,6 @@ function main(sources) {
 }
 ```
 
-#### Custom queries
-
-Cycle-idb allows to query based on a filtering function for use cases that cannot be covered with the provided selectors or indexes. The selector `query` is exposed for that purpose. The selector `query` returns a stream that will send an event with the objects in the store that fulfill the filtering function, and will send additional events every time an object that fulfills the filtering function is added, removed or modified.
-
-```javascript
-function main(sources) {
-    const tPonies$ = sources.IDB.store('ponies')
-        .query(pony => pony.name.indexOf('t') !== -1)
-}
-```
-
 #### Key ranges
 
 Cycle-idb provides a fluent api to use key ranges. For more information on IndexedDB key ranges, check [IDBKeyRange](https://developer.mozilla.org/en-US/docs/Web/API/IDBKeyRange).
@@ -95,6 +84,28 @@ function main(sources) {
     const firstPonies$ = ponyStore.upperBound('R').getAll()
     const lastPoniesKeys$ = ponyStore.lowerBound('R').getAllKeys()
     const poniesFSCount$ = ponyStore.bound('F', 'S').count()
+}
+```
+
+#### Custom queries
+
+Cycle-idb allows to query based on a filtering function for use cases that cannot be covered with the provided selectors or indexes. The selector `query` is exposed for that purpose. The selector `query` returns a stream that will send an event with the objects in the store that fulfill the filtering function, and will send additional events every time an object that fulfills the filtering function is added, removed or modified.
+
+```javascript
+function main(sources) {
+    const tPonies$ = sources.IDB.store('ponies')
+        .query(pony => pony.name.indexOf('t') !== -1)
+}
+```
+
+Custom queries can also be used on indexes.
+
+```javascript
+function main(sources) {
+    const tUnicorns$ = sources.IDB.store('ponies')
+        .index('type')
+        .only('unicorn')
+        .query(pony => pony.name.indexOf('t') !== -1)
 }
 ```
 
@@ -197,6 +208,17 @@ const twilight$ = ponyNameIndex$.only('Twilight Sparkle').get()
 const firstPonies$ = ponyNameIndex$.upperBound('R').getAll()
 const lastPoniesKeys$ = ponyNameIndex$.lowerBound('R').getAllKeys()
 const poniesFSCount$ = ponyNameIndex$.bound('F', 'S').count()
+```
+
+#### Custom queries
+
+The `query` selector is also supported in indexes for custom filtering over an index.
+
+```javascript
+const tUnicorns$ = sources.IDB.store('ponies')
+    .index('type')
+    .only('unicorn')
+    .query(pony => pony.name.indexOf('t') !== -1)
 ```
 
 ### Error handling
