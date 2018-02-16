@@ -8,7 +8,10 @@ export const sequenceListener = test => (listeners, errorHandler, bounded=true) 
 	return {
 		next: value => {
 			if (current >= listeners.length) {
-				if (bounded) test.fail(`Sequence was longer than ${listeners.length}`)
+				if (bounded) {
+					test.fail(`Unexpected value ${JSON.stringify(value)}`)
+					return
+				}
 				else current = 0
 			}
 			listeners[current](value)

@@ -6,6 +6,7 @@ import { adapt } from '@cycle/run/lib/adapt'
 
 import {
 	ReadFromDb,
+	ReadFromDbCursor,
 	hashKey,
 	keyIsUndefined,
 	promiseToStream,
@@ -29,7 +30,8 @@ export default function IndexSelector(dbPromise, result$, storeName, indexName) 
 		({ result }) => xor(result.indexes[indexName].oldValue !== key, result.indexes[indexName].newValue !== key)
 
 	const makeDbReader = ReadFromDb({ dbPromise, storeName, indexName })
-	const keyRangeCache = MultiKeyCache(key => KeyRangeSelector(result$, makeDbReader, filterByKeyRange, indexName, key), hashKey)
+	const makeDbCursorReader = ReadFromDbCursor({ dbPromise, storeName, indexName })
+	const keyRangeCache = MultiKeyCache(key => KeyRangeSelector(result$, makeDbReader, makeDbCursorReader, filterByKeyRange, indexName, key), hashKey)
 
 	return {
 		get: MultiKeyCache(key => GetSelector(result$, makeDbReader, filterByKey, key)),
@@ -37,6 +39,7 @@ export default function IndexSelector(dbPromise, result$, storeName, indexName) 
 		getAllKeys: MultiKeyCache(key => GetAllKeysSelector(result$, makeDbReader, filterByKey, keyIsAddedOrRemoved, indexName, key)),
 		getKey: MultiKeyCache(key => GetKeySelector(result$, makeDbReader, filterByKey, key)),
 		count: MultiKeyCache(key => CountSelector(result$, makeDbReader, filterByKey, key)),
+		query: MultiKeyCache(filter => QuerySelector(result$, makeDbCursorReader, filter)),
 		only: key => keyRangeCache(IDBKeyRange.only(key)),
 		bound: (lower, upper, lowerOpen=false, upperOpen=false) =>
 			keyRangeCache(IDBKeyRange.bound(lower, upper, lowerOpen, upperOpen)),
@@ -45,7 +48,7 @@ export default function IndexSelector(dbPromise, result$, storeName, indexName) 
 	}
 }
 
-function KeyRangeSelector(result$, makeDbReader, filterByKey, indexName, keyRange) {
+function KeyRangeSelector(result$, makeDbReader, makeDbCursorReader, filterByKey, indexName, keyRange) {
 	const indexIsIncluded = (key, indexValue) => isDefined(indexValue) && key.includes(indexValue)
 	const keyIsAddedOrRemoved = key => ({ result }) => xor(
 		indexIsIncluded(key, result.indexes[indexName].oldValue),
@@ -58,6 +61,7 @@ function KeyRangeSelector(result$, makeDbReader, filterByKey, indexName, keyRang
 		getAllKeys: MultiKeyCache(key => GetAllKeysSelector(result$, makeDbReader, filterByKey, keyIsAddedOrRemoved, indexName, keyRange)),
 		getKey: MultiKeyCache(key => GetKeySelector(result$, makeDbReader, filterByKey, keyRange)),
 		count: MultiKeyCache(key => CountSelector(result$, makeDbReader, filterByKey, keyRange)),
+		query: MultiKeyCache(filter => QuerySelector(result$, makeDbCursorReader, filterByKey, filter, keyRange)),
 	}
 }
 
@@ -115,6 +119,19 @@ function CountSelector(result$, makeDbReader, filterByKey, key) {
 		.map(readFromDb)
 		.map(promiseToStream)
 	const dbResult$ = flattenConcurrently(dbResult$$).compose(dropRepeats())
+	return adapt(dbResult$)
+		.remember()
+}
+
+function QuerySelector(result$, makeDbCursorReader, filterByKey, filter, key) {
+	const readFromDb = makeDbCursorReader(filter, key)
+	const dbResult$$ = result$.filter(any(resultIsCleared, filterByKey(key)))
+		.filter(any(resultIsCleared, ({ result: { oldValue, newValue }}) => 
+			(oldValue && filter(oldValue)) || (newValue && filter(newValue))))
+		.startWith(1)
+		.map(readFromDb)
+		.map(promiseToStream)
+	const dbResult$ = flattenConcurrently(dbResult$$)
 	return adapt(dbResult$)
 		.remember()
 }

@@ -27,19 +27,28 @@ export const ReadFromDb = ({ dbPromise, storeName, indexName }) => (operation, k
 	}
 }
 
-export const ReadFromDbCursor = ({ storeName, dbPromise }) => filter => async () => {
-	const db = await dbPromise
-	let cursor = await db.transaction(storeName)
-		.objectStore(storeName)
-		.openCursor()
-	const result = []
-	while (cursor) {
-		if (filter(cursor.value)) {
-			result.push(cursor.value)
+export const ReadFromDbCursor = ({ dbPromise, storeName, indexName }) => (filter, key) => {
+	const openStore = pipe(
+		db => db.transaction(storeName).objectStore(storeName),
+		store => indexName ? store.index(indexName) : store,
+	)
+	return async () => {
+		const db = await dbPromise
+		let cursor = await openStore(db).openCursor(key)
+		/*
+		let cursor = await db.transaction(storeName)
+			.objectStore(storeName)
+			.openCursor()
+			*/
+		const result = []
+		while (cursor) {
+			if (filter(cursor.value)) {
+				result.push(cursor.value)
+			}
+			cursor = await cursor.continue()
 		}
-		cursor = await cursor.continue()
+		return result
 	}
-	return result
 }
 
 export function promiseToStream(p) {
