@@ -39,7 +39,7 @@ export default function IndexSelector(dbPromise, result$, storeName, indexName) 
 		getAllKeys: MultiKeyCache(key => GetAllKeysSelector(result$, makeDbReader, filterByKey, keyIsAddedOrRemoved, indexName, key)),
 		getKey: MultiKeyCache(key => GetKeySelector(result$, makeDbReader, filterByKey, key)),
 		count: MultiKeyCache(key => CountSelector(result$, makeDbReader, filterByKey, key)),
-		query: MultiKeyCache(filter => QuerySelector(result$, makeDbCursorReader, filter)),
+		query: MultiKeyCache(filter => QuerySelector(result$, makeDbCursorReader, filterByKey, filter)),
 		only: key => keyRangeCache(IDBKeyRange.only(key)),
 		bound: (lower, upper, lowerOpen=false, upperOpen=false) =>
 			keyRangeCache(IDBKeyRange.bound(lower, upper, lowerOpen, upperOpen)),
