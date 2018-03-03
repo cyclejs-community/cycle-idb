@@ -281,4 +281,4 @@ These listeners will also catch the errors raised by writing operations that aff
 - [x] ~~Support IDBKeyRange~~
   - [x] ~~Key ranges in store selector~~
   - [x] ~~Key ranges in index selector~~
-
+- [ ] Support IDBObserver
