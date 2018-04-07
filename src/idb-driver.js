@@ -86,18 +86,18 @@ const WriteOperation = (dbPromise, operation, merge=false) => async (store, data
 
 	const keyPath = storeObj.keyPath
 	const key = operation === 'delete' ? data : data[keyPath]
-	let old
-	if (key) {
-		old = await storeObj.get(key)
-	}
 
+	const old = await (key ? storeObj.get(key) : undefined)
+	const writetx = key ? db.transaction(store, 'readwrite') : tx
+	
 	const updatedData = merge ? {...old, ...data} : data
-	const modifiedIndexes = updatedIndexes(storeObj, old, updatedData)
-
-	const [ result, _ ] = await Promise.all([
-		storeObj[operation](updatedData),
-		tx.complete
+	const modifiedIndexes = updatedIndexes(writetx.objectStore(store), old, updatedData)
+	
+	const [ result ] = await Promise.all([
+		writetx.objectStore(store)[operation](updatedData),
+		writetx.complete,
 	])
+
 	return {
 		key: result || data, // $delete returns 'undefined', but then the key is in 'data'
 		indexes: modifiedIndexes,

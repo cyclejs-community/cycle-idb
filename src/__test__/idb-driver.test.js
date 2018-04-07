@@ -91,11 +91,11 @@ test('Updates should not get propagated to multiple stores', t => {
 	]))(xs.of($put('ponies', { name: 'Twilight Sparkle', type: 'unicorn' })))
 
 	driver.store('ponies').getAll().addListener(sequenceListener(t)([
-		value => t.deepEqual(value, []),
-		value => t.deepEqual(value, [{ name: 'Twilight Sparkle', type: 'unicorn' }]),
+		value => t.deepEqual(value, [], 'Empty data in ponies'),
+		value => t.deepEqual(value, [{ name: 'Twilight Sparkle', type: 'unicorn' }], 'Twilight is in ponies'),
 	]))
 	driver.store('more-ponies').getAll().addListener(sequenceListener(t)([
-		value => t.deepEqual(value, []),
+		value => t.deepEqual(value, [], 'Empty data in more-ponies'),
 		value => t.fail(`Unexpected value '${value}'`)
 	]))
 })
