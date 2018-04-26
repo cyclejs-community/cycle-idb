@@ -151,10 +151,10 @@ Indexes allow to sort the data in a store according to a particular property or 
 
 #### Create indexes
 
-Indexes are created in the upgrade function passed to `makeIdbDriver`. The created store objects expose the method `createIndex(indexName, keyPath, options)`, which is used for that purpose.
+Indexes are created in the upgrade function passed to `makeIdbDriver`. The created store objects exposes the method `createIndex(indexName, keyPath, options)`, which is used for that purpose.
 
 - `indexName`: the name that will be used to query that specific index.
-- `keyPath`: the stuff.
+- `keyPath`: the path to the index key.
 - `options`: an optional object with a few extra options.
 
 You can check the documentation in [IDBObjectStore.createIndex](https://developer.mozilla.org/en-US/docs/Web/API/IDBObjectStore/createIndex) for additional details.
